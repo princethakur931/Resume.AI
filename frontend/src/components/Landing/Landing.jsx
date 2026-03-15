@@ -74,8 +74,8 @@ export default function Landing() {
       {/* Navbar */}
       <nav className="relative z-50 flex items-center justify-between px-6 md:px-12 py-5 border-b border-white/[0.06] glass">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center shadow-glow-sm">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
+            <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-lg font-bold tracking-tight text-white">Resume<span className="gradient-text">.AI</span></span>
         </div>

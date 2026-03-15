@@ -1,9 +1,29 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Landing from './components/Landing/Landing'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
 import Dashboard from './components/Dashboard/Dashboard'
+
+function StartupLoader() {
+  return (
+    <div className="startup-loader">
+      <div className="startup-loader-bg" />
+      <div className="startup-loader-content">
+        <div className="startup-loader-logo-wrap">
+          <img src="/Resume.AI.jpeg" alt="Resume.AI" className="startup-loader-logo" />
+          <div className="startup-loader-ring" aria-hidden="true" />
+        </div>
+        <p className="startup-loader-title">Resume.AI</p>
+        <p className="startup-loader-subtitle">Booting your AI workspace...</p>
+        <div className="startup-loader-bar">
+          <span className="startup-loader-bar-fill" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -18,6 +38,15 @@ function PublicRoute({ children }) {
 }
 
 export default function App() {
+  const [showStartupLoader, setShowStartupLoader] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowStartupLoader(false), 2800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (showStartupLoader) return <StartupLoader />
+
   return (
     <AuthProvider>
       <BrowserRouter>
