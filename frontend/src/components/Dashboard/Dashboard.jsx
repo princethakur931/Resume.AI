@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Sparkles, LogOut, Zap, ChevronRight, AlertCircle,
+  LogOut, Zap, ChevronRight, AlertCircle,
   CheckCircle2, Loader2, User, BarChart3, FileText, Target
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -91,8 +91,8 @@ export default function Dashboard() {
       {/* Top Navbar */}
       <header className="relative z-50 flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] glass shrink-0">
         <Link to="/" className="flex items-center gap-2.5" aria-label="Go to home page">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center shadow-glow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+          <div className="w-7 h-7 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
+            <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
         </Link>
