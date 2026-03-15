@@ -163,7 +163,3 @@ MIT © 2026 Resume.AI
 ## 🤝 Contributing
 
 Pull requests welcome! For major changes, open an issue first.
-
----
-
-**Made with Claude AI** 🤖
