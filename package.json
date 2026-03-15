@@ -1,0 +1,15 @@
+{
+  "name": "resume-ai",
+  "version": "1.0.0",
+  "description": "Resume.AI - AI-powered resume optimizer",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "setup": "cp backend/.env.example backend/.env && echo \"Done! Update backend/.env with your API keys.\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
