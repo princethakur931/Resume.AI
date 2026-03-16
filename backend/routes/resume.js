@@ -85,8 +85,27 @@ router.post('/optimize', authMiddleware, async (req, res) => {
     if (pdflatexAvailable) {
       try {
         console.log('✓ pdflatex found, attempting compilation...');
-        pdfBase64 = await latexService.compile(optimizedLatex);
-        console.log('✓ PDF compiled successfully, size:', pdfBase64?.length || 0, 'bytes');
+        let finalLatex = optimizedLatex;
+        pdfBase64 = await latexService.compile(finalLatex);
+
+        // Enforce single-page output with minimal fallback tightening.
+        let parsed = await pdfParse(Buffer.from(pdfBase64, 'base64'));
+        if (parsed?.numpages > 1) {
+          console.log(`⚠ PDF is ${parsed.numpages} pages, applying tightening level 1...`);
+          finalLatex = aiService.applySinglePageTightening(finalLatex, 1);
+          pdfBase64 = await latexService.compile(finalLatex);
+          parsed = await pdfParse(Buffer.from(pdfBase64, 'base64'));
+        }
+
+        if (parsed?.numpages > 1) {
+          console.log(`⚠ PDF still ${parsed.numpages} pages, applying tightening level 2...`);
+          finalLatex = aiService.applySinglePageTightening(finalLatex, 2);
+          pdfBase64 = await latexService.compile(finalLatex);
+          parsed = await pdfParse(Buffer.from(pdfBase64, 'base64'));
+        }
+
+        resume.optimizedLatex = finalLatex;
+        console.log('✓ PDF compiled successfully, pages:', parsed?.numpages || 'unknown', 'size:', pdfBase64?.length || 0, 'bytes');
       } catch (compileErr) {
         console.error('✗ LaTeX compile error:', compileErr.message);
         compileError = compileErr.message;
@@ -95,7 +114,9 @@ router.post('/optimize', authMiddleware, async (req, res) => {
       console.log('✗ pdflatex not available');
     }
 
-    resume.optimizedLatex = optimizedLatex;
+    if (!resume.optimizedLatex) {
+      resume.optimizedLatex = optimizedLatex;
+    }
     resume.extractedKeywords = keywords;
     resume.atsScore = atsScore;
     resume.pdfBase64 = pdfBase64;
