@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD
+  ? 'https://resume-ai-k9z5.onrender.com/api'
+  : '/api')
 
 const api = axios.create({
   baseURL: apiBaseUrl,
