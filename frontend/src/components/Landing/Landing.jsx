@@ -105,7 +105,7 @@ export default function Landing() {
           <motion.div variants={fadeUp} className="mb-6 flex justify-center">
             <div className="section-badge">
               <Sparkles className="w-3 h-3" />
-              Powered by Claude AI
+              Powered by Resume.AI
             </div>
           </motion.div>
 
@@ -337,12 +337,12 @@ export default function Landing() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.06] py-8 px-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
-            <Sparkles className="w-3 h-3 text-white" />
+          <div className="w-6 h-6 rounded overflow-hidden ring-1 ring-white/10">
+            <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-sm font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
         </div>
-        <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Claude AI</p>
+        <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Resume.AI</p>
       </footer>
     </div>
   )
