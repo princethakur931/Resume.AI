@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://resume-ai-j24l.onrender.com/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://resume-ai-j24l.onrender.com/api/:path*"
     }
   ]
 }
