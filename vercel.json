@@ -3,6 +3,7 @@
     {
       "source": "/api/(.*)",
       "destination": "https://resume-ai-k9z5.onrender.com/api/$1"
+      "destination": "https://resume-ai-j24l.onrender.com/api/$1"
     }
   ]
 }
