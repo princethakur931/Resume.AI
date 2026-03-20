@@ -1,7 +1,5 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
@@ -9,22 +7,9 @@ const auth = require('../middleware/auth');
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles');
-
-const photoStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
-    cb(null, `${req.user._id}-${Date.now()}${ext}`);
-  }
-});
-
 const imageUpload = multer({
-  storage: photoStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
     cb(new Error('Only image files are allowed'));
@@ -95,10 +80,8 @@ router.post('/profile/photo', auth, (req, res) => {
         return res.status(400).json({ message: 'No photo file uploaded' });
       }
 
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
-      const photoPath = `/uploads/profiles/${req.file.filename}`;
-
-      req.user.profilePhoto = `${baseUrl}${photoPath}`;
+      // Store profile image directly in DB as data URL.
+      req.user.profilePhoto = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       await req.user.save();
 
       return res.json({ message: 'Profile photo uploaded', user: serializeUser(req.user) });
@@ -116,12 +99,16 @@ router.put('/profile', auth, async (req, res) => {
       return res.status(400).json({ message: 'Name must be at least 2 characters' });
     }
 
-    const trimmedPhoto = typeof profilePhoto === 'string' ? profilePhoto.trim() : '';
+    const hasProfilePhoto = typeof profilePhoto === 'string';
+    const trimmedPhoto = hasProfilePhoto ? profilePhoto.trim() : '';
     const trimmedGithub = typeof githubProfile === 'string' ? githubProfile.trim() : '';
     const trimmedLinkedin = typeof linkedinProfile === 'string' ? linkedinProfile.trim() : '';
 
-    if (trimmedPhoto.length > 2000) {
-      return res.status(400).json({ message: 'Profile photo URL is too long' });
+    if (hasProfilePhoto) {
+      const maxPhotoLength = trimmedPhoto.startsWith('data:image/') ? 8 * 1024 * 1024 : 2000;
+      if (trimmedPhoto.length > maxPhotoLength) {
+        return res.status(400).json({ message: 'Profile photo data is too large' });
+      }
     }
 
     if (trimmedGithub.length > 2000) {
@@ -133,7 +120,7 @@ router.put('/profile', auth, async (req, res) => {
     }
 
     req.user.name = name.trim();
-    req.user.profilePhoto = trimmedPhoto;
+    if (hasProfilePhoto) req.user.profilePhoto = trimmedPhoto;
     req.user.githubProfile = trimmedGithub;
     req.user.linkedinProfile = trimmedLinkedin;
     await req.user.save();

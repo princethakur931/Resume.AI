@@ -99,7 +99,6 @@ export default function ProfilePage() {
     try {
       const payload = {
         name: form.name.trim(),
-        profilePhoto: form.profilePhoto.trim(),
         githubProfile: buildPublicLink(form.githubProfile, 'github'),
         linkedinProfile: buildPublicLink(form.linkedinProfile, 'linkedin')
       }
