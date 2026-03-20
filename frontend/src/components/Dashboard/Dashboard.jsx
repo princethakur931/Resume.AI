@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   LogOut, Zap, ChevronRight, AlertCircle,
-  CheckCircle2, Loader2, User, BarChart3, FileText, Target, Settings, Mail, Camera
+  CheckCircle2, Loader2, BarChart3, FileText, Target, Settings
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -17,7 +17,7 @@ const STEPS = [
 ]
 
 export default function Dashboard() {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const profileMenuRef = useRef(null)
 
@@ -28,14 +28,6 @@ export default function Dashboard() {
   const [optimizing, setOptimizing] = useState(false)
   const [error, setError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [profileModalOpen, setProfileModalOpen] = useState(false)
-  const [profileSaving, setProfileSaving] = useState(false)
-  const [profileError, setProfileError] = useState('')
-  const [profileSuccess, setProfileSuccess] = useState('')
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
-    profilePhoto: user?.profilePhoto || ''
-  })
 
   const [result, setResult] = useState({
     pdfBase64: null,
@@ -57,15 +49,6 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    if (user) {
-      setProfileForm({
-        name: user.name || '',
-        profilePhoto: user.profilePhoto || ''
-      })
-    }
-  }, [user])
-
-  useEffect(() => {
     const handleClickOutside = e => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
         setMenuOpen(false)
@@ -79,35 +62,7 @@ export default function Dashboard() {
 
   const handleOpenProfile = () => {
     setMenuOpen(false)
-    setProfileError('')
-    setProfileSuccess('')
-    setProfileModalOpen(true)
-  }
-
-  const handleProfileSave = async e => {
-    e.preventDefault()
-    if (!profileForm.name.trim() || profileForm.name.trim().length < 2) {
-      setProfileError('Username must be at least 2 characters')
-      return
-    }
-
-    setProfileError('')
-    setProfileSuccess('')
-    setProfileSaving(true)
-    try {
-      const payload = {
-        name: profileForm.name.trim(),
-        profilePhoto: profileForm.profilePhoto.trim()
-      }
-      const { data } = await api.put('/auth/profile', payload)
-      updateUser(data.user)
-      setProfileSuccess('Profile updated successfully')
-      setTimeout(() => setProfileModalOpen(false), 700)
-    } catch (err) {
-      setProfileError(err.response?.data?.message || 'Could not update profile')
-    } finally {
-      setProfileSaving(false)
-    }
+    navigate('/profile')
   }
 
   const handleUploaded = () => {
@@ -143,7 +98,7 @@ export default function Dashboard() {
   const activeStep = STEPS.findIndex(s => s.id === step)
 
   return (
-    <div className="h-screen bg-surface-0 flex flex-col overflow-hidden">
+    <div className="min-h-screen lg:h-screen bg-surface-0 flex flex-col overflow-y-auto lg:overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-[400px] h-[300px] bg-brand-600/6 rounded-full blur-[100px]" />
@@ -227,9 +182,9 @@ export default function Dashboard() {
       </header>
 
       {/* Main Split Layout */}
-      <div className="flex-1 flex overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative z-10">
         {/* Left Panel — Controls */}
-        <div className="w-[380px] shrink-0 flex flex-col border-r border-white/[0.06] overflow-y-auto">
+        <div className="w-full lg:w-[380px] lg:shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-white/[0.06] overflow-visible lg:overflow-y-auto">
           <div className="p-5 space-y-5">
             {/* Section 1: Upload */}
             <div>
@@ -361,12 +316,13 @@ export default function Dashboard() {
         </div>
 
         {/* Right Panel — PDF Preview */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-[62vh] lg:min-h-0">
           <PDFPreview
             pdfBase64={result.pdfBase64}
             atsScore={result.atsScore}
             keywords={result.keywords}
             status={result.status}
+            isOptimizing={optimizing}
             optimizedLatex={result.optimizedLatex}
             pdflatexAvailable={pdflatexAvailable}
             compileError={result.compileError}
@@ -374,99 +330,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {profileModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.98 }}
-              className="w-full max-w-md glass-card p-6 border border-white/[0.08]"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-semibold text-white">Profile Settings</h3>
-                <button
-                  onClick={() => setProfileModalOpen(false)}
-                  className="text-xs text-slate-500 hover:text-slate-300"
-                >
-                  Close
-                </button>
-              </div>
-
-              <form onSubmit={handleProfileSave} className="space-y-4">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1.5">Profile Photo URL</label>
-                  <div className="relative">
-                    <Camera className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                    <input
-                      value={profileForm.profilePhoto}
-                      onChange={e => setProfileForm(prev => ({ ...prev, profilePhoto: e.target.value }))}
-                      placeholder="https://example.com/photo.jpg"
-                      className="input-field pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1.5">Username</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                    <input
-                      value={profileForm.name}
-                      onChange={e => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Your name"
-                      className="input-field pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1.5">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                    <input value={user?.email || ''} className="input-field pl-10 opacity-70" disabled />
-                  </div>
-                </div>
-
-                {profileError && (
-                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                    {profileError}
-                  </div>
-                )}
-
-                {profileSuccess && (
-                  <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-                    {profileSuccess}
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setProfileModalOpen(false)}
-                    className="btn-secondary flex-1 justify-center"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={profileSaving}
-                    className="btn-primary flex-1 justify-center"
-                  >
-                    {profileSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
