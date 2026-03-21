@@ -11,8 +11,15 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token')
     const stored = localStorage.getItem('user')
     if (token && stored) {
-      setUser(JSON.parse(stored))
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      try {
+        setUser(JSON.parse(stored))
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      } catch {
+        // Recover from malformed cached auth payloads instead of crashing the app.
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        delete api.defaults.headers.common['Authorization']
+      }
     }
     setLoading(false)
   }, [])
@@ -43,4 +50,16 @@ export function AuthProvider({ children }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    return {
+      user: null,
+      loading: false,
+      login: () => {},
+      logout: () => {},
+      updateUser: () => {}
+    }
+  }
+  return context
+}

@@ -38,6 +38,10 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
    - Windows: [MiKTeX](https://miktex.org/download)
    - Mac: `brew install mactex-no-gui`
    - Linux: `sudo apt install texlive-latex-base texlive-fonts-recommended`
+5. **Firebase Project** (required for Google + Phone login/signup)
+   - Enable **Google** provider in Firebase Authentication
+   - Enable **Phone** provider in Firebase Authentication
+   - Add localhost and your deployed domain under Authorized Domains
 
 ### Installation
 
@@ -65,6 +69,25 @@ LONGCHAT_API_KEY=your_longcat_api_key_here
 AI_BASE_URL=https://api.longcat.chat/anthropic
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+
+# Firebase Admin SDK (choose one option)
+# Option A: full JSON in one env var
+FIREBASE_SERVICE_ACCOUNT_JSON=
+
+# Option B: split fields
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+```
+
+Create `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+VITE_FIREBASE_API_KEY=your_firebase_web_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
 ```
 
 **3. Get MongoDB Connection String**
@@ -134,6 +157,7 @@ Resume.AI/
 |--------|----------------------|---------------------------------|
 | POST   | `/api/auth/register` | Register user                   |
 | POST   | `/api/auth/login`    | Login user                      |
+| POST   | `/api/auth/firebase` | Google/Phone Firebase auth      |
 | GET    | `/api/resume/status` | Check pdflatex + resume status  |
 | POST   | `/api/resume/upload` | Upload resume file              |
 | POST   | `/api/resume/optimize` | Optimize with job description |
@@ -155,6 +179,12 @@ Resume.AI/
 - Verify `LONGCHAT_API_KEY` is correct
 - Check `AI_BASE_URL=https://api.longcat.chat/anthropic`
 - Model must be `LongCat-Flash-Lite` (configured automatically)
+
+**Google/Phone auth error:**
+- Verify Google and Phone providers are enabled in Firebase Authentication
+- Add localhost and your Vercel/production domain to Firebase Authorized Domains
+- Ensure frontend Firebase env vars are set in local and deployment environments
+- Ensure backend Firebase Admin credentials are valid and loaded
 
 ## 📝 License
 
