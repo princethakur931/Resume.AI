@@ -28,6 +28,10 @@ export default function Dashboard() {
   const [optimizing, setOptimizing] = useState(false)
   const [error, setError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [avatarLoadError, setAvatarLoadError] = useState(false)
+
+  const normalizedAvatar = typeof user?.profilePhoto === 'string' ? user.profilePhoto.trim() : ''
+  const shouldShowAvatar = Boolean(normalizedAvatar) && !avatarLoadError
 
   const [result, setResult] = useState({
     pdfBase64: null,
@@ -57,6 +61,10 @@ export default function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    setAvatarLoadError(false)
+  }, [normalizedAvatar])
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -139,8 +147,14 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg glass border border-white/[0.06] hover:border-brand-500/40 transition-colors"
           >
             <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center ring-1 ring-white/10">
-              {user?.profilePhoto ? (
-                <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+              {shouldShowAvatar ? (
+                <img
+                  src={normalizedAvatar}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarLoadError(true)}
+                />
               ) : (
                 <span className="text-[10px] font-semibold text-white">{(user?.name || 'U').charAt(0).toUpperCase()}</span>
               )}

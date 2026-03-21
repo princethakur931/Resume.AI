@@ -50,12 +50,16 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [avatarLoadError, setAvatarLoadError] = useState(false)
   const [form, setForm] = useState({
     name: user?.name || '',
     profilePhoto: user?.profilePhoto || '',
     githubProfile: user?.githubProfile || '',
     linkedinProfile: user?.linkedinProfile || ''
   })
+
+  const normalizedPhoto = typeof form.profilePhoto === 'string' ? form.profilePhoto.trim() : ''
+  const shouldShowAvatar = Boolean(normalizedPhoto) && !avatarLoadError
 
   useEffect(() => {
     if (!user) return
@@ -66,6 +70,10 @@ export default function ProfilePage() {
       linkedinProfile: user.linkedinProfile || ''
     })
   }, [user])
+
+  useEffect(() => {
+    setAvatarLoadError(false)
+  }, [normalizedPhoto])
 
   const handleLogout = () => {
     logout()
@@ -183,8 +191,14 @@ export default function ProfilePage() {
           <section className="glass-card p-6 lg:col-span-1">
             <div className="flex flex-col items-center text-center">
               <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center ring-1 ring-white/15 shadow-glow-sm">
-                {form.profilePhoto ? (
-                  <img src={form.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                {shouldShowAvatar ? (
+                  <img
+                    src={normalizedPhoto}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    onError={() => setAvatarLoadError(true)}
+                  />
                 ) : (
                   <span className="text-3xl font-bold text-white">{(form.name || 'U').charAt(0).toUpperCase()}</span>
                 )}

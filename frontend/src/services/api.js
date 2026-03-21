@@ -9,6 +9,9 @@ const api = axios.create({
   timeout: 120000
 })
 
+export const authWithFirebase = ({ idToken, name, profilePhoto }) =>
+  api.post('/auth/firebase', { idToken, name, profilePhoto })
+
 // Attach token on every request
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
@@ -21,9 +24,15 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      const requestUrl = err.config?.url || ''
+      const isAuthRequest = /\/auth\/(login|register|firebase)$/.test(requestUrl)
+
+      // Let auth screens handle invalid credentials/provider setup errors.
+      if (!isAuthRequest) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { getFirebaseAdmin } = require('../services/firebaseAdmin');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -19,7 +20,9 @@ const imageUpload = multer({
 const serializeUser = (user) => ({
   id: user._id,
   name: user.name,
-  email: user.email,
+  email: user.email || '',
+  phoneNumber: user.phoneNumber || '',
+  authProvider: user.authProvider || 'local',
   profilePhoto: user.profilePhoto || '',
   githubProfile: user.githubProfile || '',
   linkedinProfile: user.linkedinProfile || ''
@@ -50,6 +53,9 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user.password) {
+      return res.status(401).json({ message: 'Use Google or phone login for this account' });
+    }
 
     const valid = await user.comparePassword(password);
     if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
@@ -58,6 +64,66 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: serializeUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/firebase', async (req, res) => {
+  try {
+    const { idToken, name, profilePhoto: profilePhotoFromClient } = req.body;
+    if (!idToken) return res.status(400).json({ message: 'Firebase ID token is required' });
+
+    const admin = getFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const firebaseUserRecord = await admin.auth().getUser(decoded.uid).catch(() => null);
+
+    const firebaseUid = decoded.uid;
+    const email = decoded.email ? String(decoded.email).toLowerCase() : '';
+    const phoneNumber = decoded.phone_number || '';
+    const displayName = name?.trim() || decoded.name || (email ? email.split('@')[0] : 'User');
+    const profilePhoto = decoded.picture || profilePhotoFromClient || firebaseUserRecord?.photoURL || '';
+    const provider = decoded.firebase?.sign_in_provider === 'phone' ? 'phone' : 'google';
+
+    let user = await User.findOne({ firebaseUid });
+    if (!user && email) {
+      user = await User.findOne({ email });
+    }
+    if (!user && phoneNumber) {
+      user = await User.findOne({ phoneNumber });
+    }
+
+    if (!user) {
+      user = await User.create({
+        name: displayName,
+        email: email || undefined,
+        phoneNumber: phoneNumber || undefined,
+        authProvider: provider,
+        firebaseUid,
+        profilePhoto
+      });
+    } else {
+      user.name = user.name || displayName;
+      if (email) user.email = email;
+      if (phoneNumber) user.phoneNumber = phoneNumber;
+      if (profilePhoto) user.profilePhoto = profilePhoto;
+      user.firebaseUid = user.firebaseUid || firebaseUid;
+      if (user.authProvider === 'local' && !user.password) {
+        user.authProvider = provider;
+      }
+      await user.save();
+    }
+
+    const token = signToken(user._id);
+    return res.json({ token, user: serializeUser(user) });
+  } catch (err) {
+    const msg = err?.message || 'Firebase authentication failed';
+    const isConfigError = msg.includes('Firebase admin credentials are missing') || msg.includes('Invalid FIREBASE_SERVICE_ACCOUNT_JSON value');
+    if (isConfigError) {
+      return res.status(500).json({
+        message: 'Firebase Admin is not configured on backend. Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY in backend/.env and restart backend.'
+      });
+    }
+
+    return res.status(401).json({ message: msg });
   }
 });
 
