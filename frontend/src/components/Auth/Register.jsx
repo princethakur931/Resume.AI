@@ -1,10 +1,17 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle2, Smartphone } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import api, { authWithFirebase } from '../../services/api'
-import { getFirebaseIdToken, requestPhoneOtp, signInWithGooglePopup } from '../../services/firebase'
+import { authWithFirebase } from '../../services/api'
+import {
+  getFirebaseIdToken,
+  sendVerificationEmailToUser,
+  signInWithGooglePopup,
+  signOutFirebase,
+  signUpWithEmailPassword,
+  updateFirebaseProfileName
+} from '../../services/firebase'
 
 function GoogleColorIcon() {
   return (
@@ -27,30 +34,9 @@ export default function Register() {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState(false)
-  const [phoneLoading, setPhoneLoading] = useState(false)
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [confirmationResult, setConfirmationResult] = useState(null)
-  const [showPhoneForm, setShowPhoneForm] = useState(false)
   const [error, setError] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
   const { login } = useAuth()
-  const navigate = useNavigate()
-
-  const handleSubmit = async e => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const { data } = await api.post('/auth/register', form)
-      login(data.token, data.user)
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const continueWithFirebaseUser = async (firebaseUser, nameHint = '') => {
     const idToken = await getFirebaseIdToken(firebaseUser)
@@ -64,12 +50,33 @@ export default function Register() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    navigate('/dashboard')
+    window.location.href = '/dashboard'
+  }
+
+  const handleSubmit = async e => {
+    e.preventDefault()
+    setError('')
+    setStatusMessage('')
+    setLoading(true)
+    try {
+      const result = await signUpWithEmailPassword(form.email, form.password)
+      if (form.name.trim()) {
+        await updateFirebaseProfileName(result.user, form.name.trim())
+      }
+      await sendVerificationEmailToUser(result.user)
+      await signOutFirebase()
+      setStatusMessage('A verification link has been sent to your email. Please verify your account, then sign in.')
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleGoogleSignup = async () => {
     try {
       setError('')
+      setStatusMessage('')
       setSocialLoading(true)
       const result = await signInWithGooglePopup()
       await continueWithFirebaseUser(result.user, result.user.displayName || form.name)
@@ -77,34 +84,6 @@ export default function Register() {
       setError(err.response?.data?.message || err.message || 'Google signup failed')
     } finally {
       setSocialLoading(false)
-    }
-  }
-
-  const handleSendOtp = async () => {
-    try {
-      setError('')
-      setPhoneLoading(true)
-      const confirmation = await requestPhoneOtp(phone)
-      setConfirmationResult(confirmation)
-      setOtpSent(true)
-    } catch (err) {
-      setError(err.message || 'Unable to send OTP. Check phone number format with country code.')
-    } finally {
-      setPhoneLoading(false)
-    }
-  }
-
-  const handleVerifyOtp = async () => {
-    try {
-      if (!confirmationResult) return
-      setError('')
-      setPhoneLoading(true)
-      const result = await confirmationResult.confirm(otp)
-      await continueWithFirebaseUser(result.user)
-    } catch (err) {
-      setError(err.message || 'Invalid OTP. Please try again.')
-    } finally {
-      setPhoneLoading(false)
     }
   }
 
@@ -130,10 +109,21 @@ export default function Register() {
             <span className="text-xl font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
           </Link>
           <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="text-sm text-slate-500 mt-1">Start optimizing your resume with AI — free</p>
+          <p className="text-sm text-slate-500 mt-1">Start optimizing your resume with AI - free</p>
         </div>
 
         <div className="glass-card p-8">
+          {statusMessage && (
+            <motion.div
+              className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm mb-5"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+            >
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              {statusMessage}
+            </motion.div>
+          )}
+
           {error && (
             <motion.div
               className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm mb-5"
@@ -240,71 +230,6 @@ export default function Register() {
               <><GoogleColorIcon /> Continue with Google</>
             )}
           </button>
-
-          {!showPhoneForm ? (
-            <button
-              type="button"
-              onClick={() => setShowPhoneForm(true)}
-              className="btn-secondary w-full py-3 mt-3"
-            >
-              <Smartphone className="w-4 h-4" /> Continue with Phone Number
-            </button>
-          ) : (
-            <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400">Sign up with phone number</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPhoneForm(false)
-                    setOtpSent(false)
-                    setOtp('')
-                    setPhone('')
-                    setConfirmationResult(null)
-                  }}
-                  className="text-xs text-brand-300 hover:text-brand-200 transition-colors"
-                >
-                  Close phone signup
-                </button>
-              </div>
-              <div className="relative">
-                <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                <input
-                  type="tel"
-                  placeholder="+91XXXXXXXXXX"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="input-field pl-10"
-                />
-              </div>
-
-              {otpSent && (
-                <input
-                  type="text"
-                  placeholder="Enter OTP"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                  className="input-field"
-                />
-              )}
-
-              <button
-                type="button"
-                onClick={otpSent ? handleVerifyOtp : handleSendOtp}
-                disabled={phoneLoading || !phone || (otpSent && !otp)}
-                className="btn-primary w-full py-2.5"
-              >
-                {phoneLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Please wait...</>
-                ) : otpSent ? (
-                  'Verify OTP & Continue'
-                ) : (
-                  'Send OTP'
-                )}
-              </button>
-              <div id="recaptcha-container" />
-            </div>
-          )}
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Already have an account?{' '}

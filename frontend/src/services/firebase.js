@@ -1,10 +1,14 @@
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics'
 import {
+  applyActionCode,
   getAuth,
   GoogleAuthProvider,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
   signInWithPopup
 } from 'firebase/auth'
 
@@ -86,25 +90,29 @@ export const signInWithGooglePopup = () => {
   return signInWithPopup(getFirebaseAuth(), getGoogleProvider())
 }
 
-export const buildRecaptcha = containerId => {
-  const firebaseAuth = getFirebaseAuth()
-
-  if (window.recaptchaVerifier) {
-    window.recaptchaVerifier.clear()
-    window.recaptchaVerifier = null
-  }
-
-  window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, containerId, {
-    size: 'invisible'
-  })
-
-  return window.recaptchaVerifier
+export const signUpWithEmailPassword = (email, password) => {
+  return createUserWithEmailAndPassword(getFirebaseAuth(), email, password)
 }
 
-export const requestPhoneOtp = async phoneNumber => {
-  ensureFirebaseConfig()
-  const appVerifier = buildRecaptcha('recaptcha-container')
-  return signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+export const signInWithEmailPassword = (email, password) => {
+  return signInWithEmailAndPassword(getFirebaseAuth(), email, password)
+}
+
+export const sendVerificationEmailToUser = user => {
+  const continueUrl = `${window.location.origin}/auth/action`
+  return sendEmailVerification(user, { url: continueUrl, handleCodeInApp: false })
+}
+
+export const updateFirebaseProfileName = (user, displayName) => {
+  return updateProfile(user, { displayName })
+}
+
+export const signOutFirebase = () => {
+  return signOut(getFirebaseAuth())
+}
+
+export const applyEmailVerificationCode = code => {
+  return applyActionCode(getFirebaseAuth(), code)
 }
 
 export const getFirebaseIdToken = async user => user.getIdToken()

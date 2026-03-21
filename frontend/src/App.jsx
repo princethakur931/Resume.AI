@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Landing from './components/Landing/Landing'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
+import AuthAction from './components/Auth/AuthAction'
 import Dashboard from './components/Dashboard/Dashboard'
 import ProfilePage from './components/Profile/ProfilePage'
 
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/auth/action" element={<AuthAction />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

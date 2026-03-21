@@ -38,9 +38,10 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
    - Windows: [MiKTeX](https://miktex.org/download)
    - Mac: `brew install mactex-no-gui`
    - Linux: `sudo apt install texlive-latex-base texlive-fonts-recommended`
-5. **Firebase Project** (required for Google + Phone login/signup)
+5. **Firebase Project** (required for Google + Email/Password login)
    - Enable **Google** provider in Firebase Authentication
-   - Enable **Phone** provider in Firebase Authentication
+   - Enable **Email/Password** provider in Firebase Authentication
+   - Enable email verification in Firebase Authentication templates/settings
    - Add localhost and your deployed domain under Authorized Domains
 
 ### Installation
@@ -155,9 +156,9 @@ Resume.AI/
 
 | Method | Endpoint             | Description                     |
 |--------|----------------------|---------------------------------|
-| POST   | `/api/auth/register` | Register user                   |
+| POST   | `/api/auth/register` | Local register (legacy optional) |
 | POST   | `/api/auth/login`    | Login user                      |
-| POST   | `/api/auth/firebase` | Google/Phone Firebase auth      |
+| POST   | `/api/auth/firebase` | Firebase token auth (Google + Email/Password) |
 | GET    | `/api/resume/status` | Check pdflatex + resume status  |
 | POST   | `/api/resume/upload` | Upload resume file              |
 | POST   | `/api/resume/optimize` | Optimize with job description |
@@ -180,11 +181,6 @@ Resume.AI/
 - Check `AI_BASE_URL=https://api.longcat.chat/anthropic`
 - Model must be `LongCat-Flash-Lite` (configured automatically)
 
-**Google/Phone auth error:**
-- Verify Google and Phone providers are enabled in Firebase Authentication
-- Add localhost and your Vercel/production domain to Firebase Authorized Domains
-- Ensure frontend Firebase env vars are set in local and deployment environments
-- Ensure backend Firebase Admin credentials are valid and loaded
 
 ## 📝 License
 

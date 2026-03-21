@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
     if (!user.password) {
-      return res.status(401).json({ message: 'Use Google or phone login for this account' });
+      return res.status(401).json({ message: 'Use Firebase login for this account' });
     }
 
     const valid = await user.comparePassword(password);
@@ -78,24 +78,25 @@ router.post('/firebase', async (req, res) => {
 
     const firebaseUid = decoded.uid;
     const email = decoded.email ? String(decoded.email).toLowerCase() : '';
-    const phoneNumber = decoded.phone_number || '';
+    const providerId = decoded.firebase?.sign_in_provider || '';
+
+    if (providerId === 'password' && decoded.email_verified !== true) {
+      return res.status(401).json({ message: 'Please verify your email before signing in.' });
+    }
+
     const displayName = name?.trim() || decoded.name || (email ? email.split('@')[0] : 'User');
     const profilePhoto = decoded.picture || profilePhotoFromClient || firebaseUserRecord?.photoURL || '';
-    const provider = decoded.firebase?.sign_in_provider === 'phone' ? 'phone' : 'google';
+    const provider = providerId === 'google.com' ? 'google' : 'firebase';
 
     let user = await User.findOne({ firebaseUid });
     if (!user && email) {
       user = await User.findOne({ email });
-    }
-    if (!user && phoneNumber) {
-      user = await User.findOne({ phoneNumber });
     }
 
     if (!user) {
       user = await User.create({
         name: displayName,
         email: email || undefined,
-        phoneNumber: phoneNumber || undefined,
         authProvider: provider,
         firebaseUid,
         profilePhoto
@@ -103,7 +104,6 @@ router.post('/firebase', async (req, res) => {
     } else {
       user.name = user.name || displayName;
       if (email) user.email = email;
-      if (phoneNumber) user.phoneNumber = phoneNumber;
       if (profilePhoto) user.profilePhoto = profilePhoto;
       user.firebaseUid = user.firebaseUid || firebaseUid;
       if (user.authProvider === 'local' && !user.password) {
@@ -146,7 +146,6 @@ router.post('/profile/photo', auth, (req, res) => {
         return res.status(400).json({ message: 'No photo file uploaded' });
       }
 
-      // Store profile image directly in DB as data URL.
       req.user.profilePhoto = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       await req.user.save();
 

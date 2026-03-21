@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Smartphone } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import api, { authWithFirebase } from '../../services/api'
-import { getFirebaseIdToken, requestPhoneOtp, signInWithGooglePopup } from '../../services/firebase'
+import { authWithFirebase } from '../../services/api'
+import { getFirebaseIdToken, sendVerificationEmailToUser, signInWithEmailPassword, signInWithGooglePopup } from '../../services/firebase'
 
 function GoogleColorIcon() {
   return (
@@ -22,12 +22,6 @@ export default function Login() {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState(false)
-  const [phoneLoading, setPhoneLoading] = useState(false)
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [confirmationResult, setConfirmationResult] = useState(null)
-  const [showPhoneForm, setShowPhoneForm] = useState(false)
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -37,9 +31,14 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/login', form)
-      login(data.token, data.user)
-      navigate('/dashboard')
+      const result = await signInWithEmailPassword(form.email, form.password)
+      if (!result.user.emailVerified) {
+        await sendVerificationEmailToUser(result.user)
+        setError('Your email is not verified. A new verification link has been sent. Please check your inbox.')
+        return
+      }
+
+      await continueWithFirebaseUser(result.user, result.user.displayName || '')
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.')
     } finally {
@@ -72,34 +71,6 @@ export default function Login() {
       setError(err.response?.data?.message || err.message || 'Google login failed')
     } finally {
       setSocialLoading(false)
-    }
-  }
-
-  const handleSendOtp = async () => {
-    try {
-      setError('')
-      setPhoneLoading(true)
-      const confirmation = await requestPhoneOtp(phone)
-      setConfirmationResult(confirmation)
-      setOtpSent(true)
-    } catch (err) {
-      setError(err.message || 'Unable to send OTP. Check phone number format with country code.')
-    } finally {
-      setPhoneLoading(false)
-    }
-  }
-
-  const handleVerifyOtp = async () => {
-    try {
-      if (!confirmationResult) return
-      setError('')
-      setPhoneLoading(true)
-      const result = await confirmationResult.confirm(otp)
-      await continueWithFirebaseUser(result.user)
-    } catch (err) {
-      setError(err.message || 'Invalid OTP. Please try again.')
-    } finally {
-      setPhoneLoading(false)
     }
   }
 
@@ -210,71 +181,6 @@ export default function Login() {
               <><GoogleColorIcon /> Continue with Google</>
             )}
           </button>
-
-          {!showPhoneForm ? (
-            <button
-              type="button"
-              onClick={() => setShowPhoneForm(true)}
-              className="btn-secondary w-full py-3 mt-3"
-            >
-              <Smartphone className="w-4 h-4" /> Continue with Phone Number
-            </button>
-          ) : (
-            <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400">Login with phone number</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPhoneForm(false)
-                    setOtpSent(false)
-                    setOtp('')
-                    setPhone('')
-                    setConfirmationResult(null)
-                  }}
-                  className="text-xs text-brand-300 hover:text-brand-200 transition-colors"
-                >
-                  Close phone login
-                </button>
-              </div>
-              <div className="relative">
-                <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                <input
-                  type="tel"
-                  placeholder="+91XXXXXXXXXX"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="input-field pl-10"
-                />
-              </div>
-
-              {otpSent && (
-                <input
-                  type="text"
-                  placeholder="Enter OTP"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                  className="input-field"
-                />
-              )}
-
-              <button
-                type="button"
-                onClick={otpSent ? handleVerifyOtp : handleSendOtp}
-                disabled={phoneLoading || !phone || (otpSent && !otp)}
-                className="btn-primary w-full py-2.5"
-              >
-                {phoneLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Please wait...</>
-                ) : otpSent ? (
-                  'Verify OTP & Continue'
-                ) : (
-                  'Send OTP'
-                )}
-              </button>
-              <div id="recaptcha-container" />
-            </div>
-          )}
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Don't have an account?{' '}
