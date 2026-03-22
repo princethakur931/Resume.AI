@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { authWithFirebase } from '../../services/api'
+import { authWithFirebase, warmBackend } from '../../services/api'
 import {
   getFirebaseIdToken,
   sendVerificationEmailToUser,
@@ -37,6 +37,10 @@ export default function Register() {
   const [error, setError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const { login } = useAuth()
+
+  useEffect(() => {
+    warmBackend()
+  }, [])
 
   const continueWithFirebaseUser = async (firebaseUser, nameHint = '') => {
     const idToken = await getFirebaseIdToken(firebaseUser)
@@ -78,7 +82,9 @@ export default function Register() {
       setError('')
       setStatusMessage('')
       setSocialLoading(true)
+      const warmup = warmBackend()
       const result = await signInWithGooglePopup()
+      await warmup
       await continueWithFirebaseUser(result.user, result.user.displayName || form.name)
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Google signup failed')

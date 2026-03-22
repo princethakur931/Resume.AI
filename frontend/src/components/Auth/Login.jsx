@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { authWithFirebase } from '../../services/api'
+import { authWithFirebase, warmBackend } from '../../services/api'
 import { getFirebaseIdToken, sendVerificationEmailToUser, signInWithEmailPassword, signInWithGooglePopup } from '../../services/firebase'
 
 function GoogleColorIcon() {
@@ -25,6 +25,10 @@ export default function Login() {
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    warmBackend()
+  }, [])
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -65,7 +69,9 @@ export default function Login() {
     try {
       setError('')
       setSocialLoading(true)
+      const warmup = warmBackend()
       const result = await signInWithGooglePopup()
+      await warmup
       await continueWithFirebaseUser(result.user, result.user.displayName || '')
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Google login failed')
