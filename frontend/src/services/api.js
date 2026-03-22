@@ -9,6 +9,18 @@ const api = axios.create({
   timeout: 120000
 })
 
+let warmBackendPromise = null
+
+export const warmBackend = () => {
+  if (!warmBackendPromise) {
+    warmBackendPromise = api
+      .get('/health', { timeout: 15000 })
+      .catch(() => null)
+  }
+
+  return warmBackendPromise
+}
+
 export const authWithFirebase = ({ idToken, name, profilePhoto }) =>
   api.post('/auth/firebase', { idToken, name, profilePhoto })
 

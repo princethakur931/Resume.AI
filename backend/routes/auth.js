@@ -74,7 +74,6 @@ router.post('/firebase', async (req, res) => {
 
     const admin = getFirebaseAdmin();
     const decoded = await admin.auth().verifyIdToken(idToken);
-    const firebaseUserRecord = await admin.auth().getUser(decoded.uid).catch(() => null);
 
     const firebaseUid = decoded.uid;
     const email = decoded.email ? String(decoded.email).toLowerCase() : '';
@@ -85,13 +84,14 @@ router.post('/firebase', async (req, res) => {
     }
 
     const displayName = name?.trim() || decoded.name || (email ? email.split('@')[0] : 'User');
-    const profilePhoto = decoded.picture || profilePhotoFromClient || firebaseUserRecord?.photoURL || '';
+    const profilePhoto = decoded.picture || profilePhotoFromClient || '';
     const provider = providerId === 'google.com' ? 'google' : 'firebase';
 
-    let user = await User.findOne({ firebaseUid });
-    if (!user && email) {
-      user = await User.findOne({ email });
-    }
+    const lookupQuery = email
+      ? { $or: [{ firebaseUid }, { email }] }
+      : { firebaseUid };
+
+    let user = await User.findOne(lookupQuery);
 
     if (!user) {
       user = await User.create({
