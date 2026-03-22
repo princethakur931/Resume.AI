@@ -156,6 +156,12 @@ export default function ProfilePage() {
 
       <header className="relative z-20 flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] glass">
         <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5" aria-label="Go to home page">
+            <div className="w-7 h-7 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
+              <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
+          </Link>
           <button
             onClick={() => navigate('/dashboard')}
             className="btn-secondary px-4 py-2"
@@ -163,12 +169,6 @@ export default function ProfilePage() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
-          <Link to="/" className="flex items-center gap-2.5" aria-label="Go to home page">
-            <div className="w-7 h-7 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
-              <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
-          </Link>
         </div>
 
         <button onClick={handleLogout} className="btn-secondary px-4 py-2">Logout</button>

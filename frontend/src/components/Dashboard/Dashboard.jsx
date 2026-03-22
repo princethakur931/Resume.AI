@@ -155,7 +155,7 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="absolute right-0 mt-2 w-64 glass-card border border-white/[0.08] p-2 z-[60]"
+                className="absolute right-0 mt-2 w-64 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-white/[0.12] shadow-2xl p-2 z-[60]"
               >
                 <div className="px-3 py-2 border-b border-white/[0.06]">
                   <p className="text-xs text-slate-400">Signed in as</p>
