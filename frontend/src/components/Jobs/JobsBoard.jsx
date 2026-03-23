@@ -118,18 +118,18 @@ export default function JobsBoard() {
       </div>
 
       <header className="relative z-20 border-b border-white/[0.08] glass">
-        <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg overflow-hidden ring-1 ring-white/10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden ring-1 ring-white/10 flex-shrink-0">
               <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-[0.2em]">Hiring Board</p>
-              <h1 className="text-lg font-bold text-white">Live Job Openings</h1>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-[0.2em]">Hiring Board</p>
+              <h1 className="text-sm sm:text-lg font-bold text-white leading-tight whitespace-nowrap">Live Job Openings</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to="/dashboard" className="btn-primary text-xs px-4 py-2 transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/50">Back to Dashboard</Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link to="/dashboard" className="btn-primary !rounded-lg !text-[11px] sm:!text-xs !px-2.5 sm:!px-4 !py-1.5 sm:!py-2 whitespace-nowrap transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/50">Back to Dashboard</Link>
           </div>
         </div>
       </header>
@@ -249,7 +249,7 @@ export default function JobsBoard() {
                     </div>
 
                     <div className="mt-4 flex-1 min-h-0">
-                      <p className="text-sm text-slate-400 leading-relaxed line-clamp-3">Job Description: {job.jobDescription}</p>
+                      <p className="text-sm text-slate-400 leading-relaxed line-clamp-3 break-words [overflow-wrap:anywhere]">Job Description: {job.jobDescription}</p>
                     </div>
 
                     <div className="mt-5 pt-4 border-t border-white/[0.08] flex flex-col gap-4">
@@ -299,7 +299,7 @@ export default function JobsBoard() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="glass-card p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-brand-400/20 rounded-2xl"
+            className="glass-card p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar border border-brand-400/20 rounded-2xl"
           >
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -314,7 +314,7 @@ export default function JobsBoard() {
                   />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-white">{selectedJob.jobRole}</h2>
+                  <h2 className="text-xl sm:text-2xl font-black text-white break-words [overflow-wrap:anywhere]">{selectedJob.jobRole}</h2>
                   <p className="text-sm text-slate-400 mt-1">{selectedJob.companyName}</p>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default function JobsBoard() {
 
               <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_28px_rgba(139,92,246,0.22)]">
                 <p className="text-xs text-slate-500 uppercase mb-2">Complete Job Description</p>
-                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedJob.jobDescription}</p>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{selectedJob.jobDescription}</p>
               </div>
 
               <div className="flex gap-3 mt-6">

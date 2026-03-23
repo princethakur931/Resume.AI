@@ -13,10 +13,16 @@
     overflow-x: hidden;
   }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #0f0f1a; }
-  ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+  html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 
   ::selection { background: rgba(99,102,241,0.3); color: #fff; }
 }
@@ -178,6 +184,17 @@
     pointer-events: none;
     z-index: 0;
   }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
 /* Progress bar */
@@ -308,4 +325,13 @@
 @keyframes startup-sweep {
   0% { transform: translateX(-120%); }
   100% { transform: translateX(300%); }
+}
+
+@keyframes admin-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: admin-fade-in 0.8s ease-in-out;
 }

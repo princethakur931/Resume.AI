@@ -51,12 +51,15 @@ function AdminSecretRoute({ children }) {
 }
 
 export default function App() {
-  const [showStartupLoader, setShowStartupLoader] = useState(true)
+  const isAdminRoute = window.location.pathname === adminSecretPath
+  const [showStartupLoader, setShowStartupLoader] = useState(!isAdminRoute)
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowStartupLoader(false), 2800)
-    return () => clearTimeout(timer)
-  }, [])
+    if (!isAdminRoute) {
+      const timer = setTimeout(() => setShowStartupLoader(false), 2800)
+      return () => clearTimeout(timer)
+    }
+  }, [isAdminRoute])
 
   if (showStartupLoader) return <StartupLoader />
 

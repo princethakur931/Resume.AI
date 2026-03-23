@@ -44,6 +44,7 @@ export default function AdminJobsSecret() {
   const [success, setSuccess] = useState('')
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
 
   const activeJobs = useMemo(() => jobs.filter(job => job.isActive).length, [jobs])
 
@@ -60,7 +61,9 @@ export default function AdminJobsSecret() {
   }
 
   useEffect(() => {
+    const timer = setTimeout(() => setInitialLoading(false), 3200)
     fetchJobs()
+    return () => clearTimeout(timer)
   }, [])
 
   const postJob = async e => {
@@ -126,6 +129,30 @@ export default function AdminJobsSecret() {
     )
   }
 
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-surface-0 flex items-center justify-center relative overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] right-[-5%] w-[520px] h-[520px] bg-red-500/10 rounded-full blur-[130px]" />
+          <div className="absolute bottom-[-20%] left-[-5%] w-[620px] h-[620px] bg-amber-500/10 rounded-full blur-[140px]" />
+        </div>
+        <div className="relative z-10 text-center">
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6 }} className="mb-6">
+            <img src="/admin-logo.png" alt="Admin Loading" className="w-32 h-32 mx-auto rounded-xl object-contain" />
+          </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }} className="mt-4">
+            <p className="text-white text-lg font-bold mb-2">Initializing Admin Panel</p>
+            <div className="flex items-center justify-center gap-1">
+              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
+              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-surface-0 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none">
@@ -134,31 +161,31 @@ export default function AdminJobsSecret() {
       </div>
 
       <header className="relative z-10 border-b border-white/[0.08] glass">
-        <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500/80 to-amber-500/80 grid place-items-center text-white">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-red-300">Secret Admin Portal</p>
-              <h1 className="text-xl font-black text-white">Jobs Control Room</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <img src="/admin-logo.png" alt="Admin Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-contain flex-shrink-0 animate-fade-in" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-red-300 whitespace-nowrap">Secret Admin Portal</p>
+              <h1 className="text-sm sm:text-xl font-black text-white leading-tight whitespace-nowrap">Jobs Control Room</h1>
             </div>
           </div>
-          <Link to="/dashboard" className="btn-primary text-xs px-4 py-2">Go to Dashboard</Link>
+          <Link to="/dashboard" className="inline-flex items-center justify-center gap-2 !rounded-lg !text-[11px] sm:!text-xs !px-2.5 sm:!px-4 !py-1.5 sm:!py-2 whitespace-nowrap flex-shrink-0 font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 transition-all duration-200 shadow-[0_8px_20px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_26px_rgba(251,146,60,0.45)] active:scale-95">
+            Go to Dashboard
+          </Link>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-5 py-8 grid lg:grid-cols-[420px,1fr] gap-6">
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6 h-fit transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_34px_rgba(139,92,246,0.22)]">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-5 py-6 sm:py-8 grid lg:grid-cols-[420px,1fr] gap-4 sm:gap-6">
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-4 sm:p-6 h-fit transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_34px_rgba(139,92,246,0.22)]">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">Post New Job</h2>
-            <span className="text-xs text-red-200 bg-red-500/10 border border-red-400/20 rounded-full px-2 py-1">Hidden Panel</span>
+            <span className="text-[11px] sm:text-xs text-red-200 bg-red-500/10 border border-red-400/20 rounded-full px-2 py-1 whitespace-nowrap">Hidden Panel</span>
           </div>
 
           <form onSubmit={postJob} className="space-y-3">
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Company Photo Upload</label>
-              <input type="file" accept="image/*" className="input-field file:mr-3 file:border-0 file:bg-white/10 file:text-white file:px-3 file:py-1.5" onChange={handlePhotoUpload} />
+              <input type="file" accept="image/*" className="input-field text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:border-0 file:bg-white/10 file:text-white file:px-2 sm:file:px-3 file:py-1.5" onChange={handlePhotoUpload} />
               {!photoName && <p className="text-[11px] text-slate-500 mt-1">Optional: If not uploaded, default company icon will be used.</p>}
               {photoName && <p className="text-[11px] text-slate-400 mt-1">Uploaded: {photoName}</p>}
             </div>
@@ -194,14 +221,14 @@ export default function AdminJobsSecret() {
             {error && <p className="text-sm text-red-300">{error}</p>}
             {success && <p className="text-sm text-emerald-300">{success}</p>}
 
-            <button type="submit" disabled={submitting} className="btn-primary w-full justify-center">
+            <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white text-sm bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 transition-all duration-200 shadow-[0_8px_20px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_26px_rgba(251,146,60,0.45)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[0_8px_20px_rgba(249,115,22,0.35)]">
               <Plus className="w-4 h-4" /> {submitting ? 'Posting...' : 'Post Job'}
             </button>
           </form>
         </motion.section>
 
         <section>
-          <div className="grid sm:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
             <div className="glass-card p-4 transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_28px_rgba(139,92,246,0.2)]">
               <p className="text-xs text-slate-500 uppercase">Total Jobs</p>
               <p className="text-2xl font-black text-white mt-1">{jobs.length}</p>
@@ -227,8 +254,8 @@ export default function AdminJobsSecret() {
             <div className="space-y-3">
               {jobs.map(job => (
                 <div key={job._id} className="glass-card p-4 border border-white/[0.09] transition-all duration-300 hover:border-brand-400/40 hover:shadow-[0_0_36px_rgba(139,92,246,0.22)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-12 h-12 rounded-lg bg-white p-1 ring-1 ring-white/10 grid place-items-center">
                         <img
                           src={job.companyPhoto || DEFAULT_COMPANY_PHOTO}
@@ -239,18 +266,10 @@ export default function AdminJobsSecret() {
                           }}
                         />
                       </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Job Role: {job.jobRole}</h3>
-                        <p className="text-xs text-slate-400">Company: {job.companyName}</p>
+                      <div className="min-w-0">
+                        <h3 className="text-white font-semibold break-words [overflow-wrap:anywhere]">Job Role: {job.jobRole}</h3>
+                        <p className="text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Company: {job.companyName}</p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => deleteJob(job._id)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 bg-red-500/10 text-red-300"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete
-                      </button>
                     </div>
                   </div>
 
@@ -262,12 +281,20 @@ export default function AdminJobsSecret() {
                     </p>
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-400">Job Description: {job.jobDescription}</p>
+                  <p className="mt-2 text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Job Description: {job.jobDescription}</p>
 
-                  <p className="mt-2 text-[11px] text-slate-400">Apply Redirect URL: {job.applyUrl || 'Not set'}</p>
+                  <p className="mt-2 text-[11px] text-slate-400 break-all">Apply Redirect URL: {job.applyUrl || 'Not set'}</p>
 
-                  <div className="mt-3 text-xs text-slate-300 inline-flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-cyan-300" /> Applicants: {job.applicants?.length || 0}
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <div className="text-xs text-slate-300 inline-flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5 text-cyan-300" /> Applicants: {job.applicants?.length || 0}
+                    </div>
+                    <button
+                      onClick={() => deleteJob(job._id)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 bg-red-500/10 text-red-300 whitespace-nowrap"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
                   </div>
                 </div>
               ))}
