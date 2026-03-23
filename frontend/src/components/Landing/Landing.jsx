@@ -83,6 +83,7 @@ export default function Landing() {
           {!loading && user ? (
             <>
               <span className="hidden sm:inline text-xs text-slate-400">Signed in as {user?.name}</span>
+              <Link to="/jobs" className="btn-secondary text-sm px-4 py-2">Jobs</Link>
               <Link to="/dashboard" className="btn-primary text-sm px-4 py-2">Go to Dashboard <ArrowRight className="w-4 h-4" /></Link>
             </>
           ) : (

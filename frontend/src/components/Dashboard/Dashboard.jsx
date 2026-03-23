@@ -117,6 +117,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link to="/jobs" className="btn-secondary text-xs px-3 py-2">Jobs</Link>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg glass border border-white/[0.06]">
             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
               <User className="w-2.5 h-2.5 text-white" />

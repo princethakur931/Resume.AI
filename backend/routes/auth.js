@@ -5,6 +5,13 @@ const User = require('../models/User');
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
+const adminEmails = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(email => email.trim().toLowerCase())
+  .filter(Boolean);
+
+const resolveRoleByEmail = email => (adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user');
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -14,9 +21,10 @@ router.post('/register', async (req, res) => {
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered' });
 
-    const user = await User.create({ name, email, password });
+    const role = resolveRoleByEmail(email);
+    const user = await User.create({ name, email, password, role });
     const token = signToken(user._id);
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -34,8 +42,14 @@ router.post('/login', async (req, res) => {
     const valid = await user.comparePassword(password);
     if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
 
+    const role = resolveRoleByEmail(user.email);
+    if (user.role !== role) {
+      user.role = role;
+      await user.save();
+    }
+
     const token = signToken(user._id);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

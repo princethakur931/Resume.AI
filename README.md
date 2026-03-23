@@ -12,6 +12,8 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
 - **ATS Score** — Get real-time ATS compatibility score (0-100)
 - **Overleaf Integration** — Open optimized LaTeX directly in Overleaf
 - **1-Page Guarantee** — All resumes compile to exactly one page
+- **Jobs Board + Direct Apply** — Users can browse posted jobs and apply instantly
+- **Secret Admin Jobs Portal** — Admin-only job posting panel behind hidden URL
 
 ## 📦 Tech Stack
 
@@ -65,6 +67,14 @@ LONGCHAT_API_KEY=your_longcat_api_key_here
 AI_BASE_URL=https://api.longcat.chat/anthropic
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+ADMIN_EMAILS=admin@example.com
+```
+
+Create `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+VITE_ADMIN_SECRET_PATH=/admin
 ```
 
 **3. Get MongoDB Connection String**
@@ -138,6 +148,11 @@ Resume.AI/
 | POST   | `/api/resume/upload` | Upload resume file              |
 | POST   | `/api/resume/optimize` | Optimize with job description |
 | GET    | `/api/resume/pdf`    | Get stored PDF                  |
+| GET    | `/api/jobs`          | List active jobs (user)         |
+| POST   | `/api/jobs/:id/apply`| Apply to a job (user)           |
+| GET    | `/api/jobs/admin/all`| List all jobs (admin)           |
+| POST   | `/api/jobs/admin`    | Post a new job (admin)          |
+| PATCH  | `/api/jobs/admin/:id/status` | Enable/Disable job (admin) |
 
 ## 🐛 Troubleshooting
 

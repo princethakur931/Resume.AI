@@ -11,8 +11,13 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token')
     const stored = localStorage.getItem('user')
     if (token && stored) {
-      setUser(JSON.parse(stored))
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      try {
+        setUser(JSON.parse(stored))
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      } catch {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     }
     setLoading(false)
   }, [])
