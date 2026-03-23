@@ -27,6 +27,7 @@ const serializeUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email || '',
+  role: user.role || 'user',
   phoneNumber: user.phoneNumber || '',
   authProvider: user.authProvider || 'local',
   profilePhoto: user.profilePhoto || '',
@@ -46,7 +47,6 @@ router.post('/register', async (req, res) => {
     const role = resolveRoleByEmail(email);
     const user = await User.create({ name, email, password, role });
     const token = signToken(user._id);
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
     res.status(201).json({ token, user: serializeUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -75,7 +75,6 @@ router.post('/login', async (req, res) => {
     }
 
     const token = signToken(user._id);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
     res.json({ token, user: serializeUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -112,6 +111,7 @@ router.post('/firebase', async (req, res) => {
       user = await User.create({
         name: displayName,
         email: email || undefined,
+        role: email ? resolveRoleByEmail(email) : 'user',
         authProvider: provider,
         firebaseUid,
         profilePhoto
@@ -123,6 +123,9 @@ router.post('/firebase', async (req, res) => {
       user.firebaseUid = user.firebaseUid || firebaseUid;
       if (user.authProvider === 'local' && !user.password) {
         user.authProvider = provider;
+      }
+      if (email) {
+        user.role = resolveRoleByEmail(email);
       }
       await user.save();
     }
