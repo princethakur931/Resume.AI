@@ -72,24 +72,25 @@ export default function Landing() {
       </div>
 
       {/* Navbar */}
-      <nav className="relative z-50 flex items-center justify-between px-6 md:px-12 py-5 border-b border-white/[0.06] glass">
+      <nav className="relative z-50 flex items-center justify-between gap-3 px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-white/[0.06] glass">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
             <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-lg font-bold tracking-tight text-white">Resume<span className="gradient-text">.AI</span></span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex items-center justify-end gap-2 sm:gap-3 shrink-0">
           {!loading && user ? (
             <>
               <span className="hidden sm:inline text-xs text-slate-400">Signed in as {user?.name}</span>
               <Link to="/jobs" className="btn-secondary text-sm px-4 py-2">Jobs</Link>
               <Link to="/dashboard" className="btn-primary text-sm px-4 py-2">Go to Dashboard <ArrowRight className="w-4 h-4" /></Link>
+              <Link to="/dashboard" className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap">Go to Dashboard <ArrowRight className="w-4 h-4" /></Link>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-secondary text-sm px-4 py-2">Sign In</Link>
-              <Link to="/register" className="btn-primary text-sm px-4 py-2">Get Started <ArrowRight className="w-4 h-4" /></Link>
+              <Link to="/login" className="btn-secondary text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap">Sign In</Link>
+              <Link to="/register" className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap">Get Started <ArrowRight className="w-4 h-4" /></Link>
             </>
           )}
         </div>
@@ -106,7 +107,7 @@ export default function Landing() {
           <motion.div variants={fadeUp} className="mb-6 flex justify-center">
             <div className="section-badge">
               <Sparkles className="w-3 h-3" />
-              Powered by Claude AI
+              Powered by Resume.AI
             </div>
           </motion.div>
 
@@ -133,11 +134,11 @@ export default function Landing() {
               </>
             ) : (
               <>
-                <Link to="/register" className="btn-primary px-8 py-4 text-base shadow-glow-md">
+                <Link to="/register" className="btn-primary w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base shadow-glow-md">
                   Optimize My Resume Free
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                <Link to="/login" className="btn-secondary px-8 py-4 text-base">
+                <Link to="/login" className="btn-secondary w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base">
                   Sign In
                   <ChevronRight className="w-4 h-4" />
                 </Link>
@@ -187,9 +188,9 @@ export default function Landing() {
                   <div className="text-xs text-slate-500 uppercase tracking-wider mb-4">Upload & Optimize</div>
                   <div className="space-y-3">
                     <div className="glass rounded-lg p-3 border border-brand-500/30">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 min-w-0">
                         <div className="w-2 h-2 rounded-full bg-green-400" />
-                        <span className="text-xs text-slate-400">resume_john_doe.pdf</span>
+                        <span className="text-xs text-slate-400 truncate block min-w-0">Resume.pdf</span>
                       </div>
                       <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
                         <div className="h-full w-3/4 progress-bar rounded-full" />
@@ -325,8 +326,9 @@ export default function Landing() {
                 Join thousands of job seekers who've boosted their ATS scores and landed more interviews with Resume.AI.
               </motion.p>
               <motion.div variants={fadeUp}>
-                <Link to="/register" className="btn-primary px-10 py-4 text-base shadow-glow-lg">
-                  Optimize My Resume — It's Free
+                <Link to="/register" className="btn-primary w-full sm:w-auto max-w-[280px] sm:max-w-none justify-center px-5 sm:px-10 py-3 sm:py-4 text-sm sm:text-base leading-tight shadow-glow-lg">
+                  <span className="sm:hidden">Optimize My Resume</span>
+                  <span className="hidden sm:inline">Optimize My Resume — It's Free</span>
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </motion.div>
@@ -338,12 +340,12 @@ export default function Landing() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.06] py-8 px-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
-            <Sparkles className="w-3 h-3 text-white" />
+          <div className="w-6 h-6 rounded overflow-hidden ring-1 ring-white/10">
+            <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-sm font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
         </div>
-        <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Claude AI</p>
+        <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Resume.AI</p>
       </footer>
     </div>
   )

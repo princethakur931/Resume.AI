@@ -1,30 +1,82 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import api from '../../services/api'
+import { authWithFirebase, warmBackend } from '../../services/api'
+import { getFirebaseIdToken, sendVerificationEmailToUser, signInWithEmailPassword, signInWithGooglePopup } from '../../services/firebase'
+
+function GoogleColorIcon() {
+  return (
+    <svg viewBox="0 0 48 48" className="w-4 h-4" aria-hidden="true">
+      <path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.3C33.66 32.66 29.27 36 24 36c-6.62 0-12-5.38-12-12s5.38-12 12-12c3.06 0 5.84 1.15 7.95 3.05l5.66-5.66C34.06 6.05 29.27 4 24 4 12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20c0-1.34-.14-2.65-.39-3.92z" />
+      <path fill="#FF3D00" d="M6.31 14.69l6.57 4.82C14.66 15.11 18.96 12 24 12c3.06 0 5.84 1.15 7.95 3.05l5.66-5.66C34.06 6.05 29.27 4 24 4c-7.68 0-14.32 4.34-17.69 10.69z" />
+      <path fill="#4CAF50" d="M24 44c5.17 0 9.86-1.98 13.41-5.2l-6.19-5.24C29.18 35.09 26.72 36 24 36c-5.25 0-9.62-3.31-11.29-7.94l-6.52 5.02C9.51 39.56 16.24 44 24 44z" />
+      <path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.3a12.04 12.04 0 0 1-4.08 5.56l.01-.01 6.19 5.24C36.97 39.14 44 34 44 24c0-1.34-.14-2.65-.39-3.92z" />
+    </svg>
+  )
+}
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [socialLoading, setSocialLoading] = useState(false)
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    warmBackend()
+  }, [])
 
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/login', form)
-      login(data.token, data.user)
-      navigate('/dashboard')
+      const result = await signInWithEmailPassword(form.email, form.password)
+      if (!result.user.emailVerified) {
+        await sendVerificationEmailToUser(result.user)
+        setError('Your email is not verified. A new verification link has been sent. Please check your inbox.')
+        return
+      }
+
+      await continueWithFirebaseUser(result.user, result.user.displayName || '')
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const continueWithFirebaseUser = async (firebaseUser, nameHint = '') => {
+    const idToken = await getFirebaseIdToken(firebaseUser)
+    const photoFromProvider = firebaseUser?.photoURL || firebaseUser?.providerData?.[0]?.photoURL || ''
+    const { data } = await authWithFirebase({
+      idToken,
+      name: nameHint,
+      profilePhoto: photoFromProvider
+    })
+    login(data.token, {
+      ...data.user,
+      profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
+    })
+    navigate('/dashboard')
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError('')
+      setSocialLoading(true)
+      const warmup = warmBackend()
+      const result = await signInWithGooglePopup()
+      await warmup
+      await continueWithFirebaseUser(result.user, result.user.displayName || '')
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google login failed')
+    } finally {
+      setSocialLoading(false)
     }
   }
 
@@ -116,6 +168,25 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-slate-500">OR</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={socialLoading}
+            className="btn-secondary w-full py-3"
+          >
+            {socialLoading ? (
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Connecting...</>
+            ) : (
+              <><GoogleColorIcon /> Continue with Google</>
+            )}
+          </button>
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Don't have an account?{' '}

@@ -5,7 +5,7 @@ import {
   FileText, AlertTriangle, CheckCircle2, BarChart3
 } from 'lucide-react'
 
-export default function PDFPreview({ pdfBase64, atsScore, keywords, status, optimizedLatex, pdflatexAvailable, compileError }) {
+export default function PDFPreview({ pdfBase64, atsScore, keywords, status, isOptimizing, optimizedLatex, pdflatexAvailable, compileError }) {
   const [zoom, setZoom] = useState(1)
   const iframeRef = useRef(null)
 
@@ -139,6 +139,24 @@ export default function PDFPreview({ pdfBase64, atsScore, keywords, status, opti
                     style={{ width: `${794 * zoom}px`, height: `${1123 * zoom}px` }}
                     title="Resume PDF Preview"
                   />
+                </div>
+              </div>
+            </motion.div>
+          ) : isOptimizing ? (
+            <motion.div key="optimizing" className="h-full flex items-center justify-center p-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="text-center w-full max-w-sm">
+                <div className="startup-loader-logo-wrap mx-auto mb-2">
+                  <img src="/Resume.AI.jpeg" alt="Resume.AI" className="startup-loader-logo" />
+                  <div className="startup-loader-ring" aria-hidden="true" />
+                </div>
+                <h3 className="text-base font-semibold text-white mb-1">Optimizing Your Resume</h3>
+                <p className="text-sm text-slate-500 mb-4">Analyzing ATS keywords and compiling your PDF...</p>
+                <div className="startup-loader-bar mb-3">
+                  <span className="startup-loader-bar-fill" />
+                </div>
+                <div className="inline-flex items-center gap-2 text-xs text-brand-300">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Please wait, this can take a few seconds
                 </div>
               </div>
             </motion.div>

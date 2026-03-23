@@ -17,6 +17,10 @@ export function AuthProvider({ children }) {
       } catch {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
+        // Recover from malformed cached auth payloads instead of crashing the app.
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        delete api.defaults.headers.common['Authorization']
       }
     }
     setLoading(false)
@@ -36,11 +40,28 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const updateUser = userData => {
+    localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    return {
+      user: null,
+      loading: false,
+      login: () => {},
+      logout: () => {},
+      updateUser: () => {}
+    }
+  }
+  return context
+}
