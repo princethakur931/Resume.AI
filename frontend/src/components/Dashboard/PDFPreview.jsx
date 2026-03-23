@@ -95,7 +95,7 @@ export default function PDFPreview({ pdfBase64, atsScore, keywords, status, isOp
           <div className="flex items-center gap-4">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${scoreBg}`}>
               <BarChart3 className={`w-3.5 h-3.5 ${scoreColor}`} />
-              <span className="text-xs text-slate-500">ATS Score:</span>
+              <span className="text-xs text-slate-500">ATS (Optimized):</span>
               <span className={`text-sm font-bold ${scoreColor}`}>{atsScore}/100</span>
             </div>
             <div className="flex flex-wrap gap-1.5 flex-1 overflow-hidden">

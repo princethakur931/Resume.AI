@@ -48,6 +48,14 @@ export default function Dashboard() {
       if (data.resume) {
         setResumeUploaded(true)
         setStep('optimize')
+        setResult({
+          pdfBase64: null,
+          atsScore: 0,
+          keywords: [],
+          status: 'idle',
+          optimizedLatex: null,
+          compileError: null
+        })
       }
     }).catch(() => {})
   }, [])
@@ -294,7 +302,7 @@ export default function Dashboard() {
                 <div className="h-px bg-white/[0.06]" />
                 <div className="glass-card p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">ATS Score</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">ATS Score (Optimized Resume)</span>
                     <span className={`text-xl font-black ${result.atsScore >= 80 ? 'text-emerald-400' : result.atsScore >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
                       {result.atsScore}<span className="text-xs text-slate-600 font-normal">/100</span>
                     </span>

@@ -1,5 +1,11 @@
-const BASE_URL = process.env.AI_BASE_URL || 'https://api.anthropic.com';
+const BASE_URL = process.env.AI_BASE_URL || 'https://api.longcat.chat/anthropic';
 const MODEL    = 'LongCat-Flash-Lite';
+
+const ATS_STOPWORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have', 'in', 'is', 'it',
+  'of', 'on', 'or', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'you', 'your', 'our', 'we',
+  'this', 'these', 'those', 'their', 'they', 'them', 'can', 'should', 'must', 'not', 'able', 'using'
+]);
 
 const LATEX_UNICODE_REPLACEMENTS = [
   ['\u2018', "'"],
@@ -161,6 +167,171 @@ function trimSentence(text = '', maxLen = 600) {
 function compactSectionBullets(sectionName, blockText) {
   // Preserve all bullets as-is — do not truncate or drop any content
   return blockText;
+}
+
+function tokenize(text = '') {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9+.#\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .filter((t) => t.length > 1 && !ATS_STOPWORDS.has(t));
+}
+
+function latexToPlainText(latex = '') {
+  return latex
+    .replace(/%.*$/gm, ' ')
+    .replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^}]*\})?/g, ' ')
+    .replace(/[{}$\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildTopJobTerms(jobDescription = '', limit = 35) {
+  const freq = new Map();
+  for (const token of tokenize(jobDescription)) {
+    if (token.length < 3) continue;
+    freq.set(token, (freq.get(token) || 0) + 1);
+  }
+
+  return Array.from(freq.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .slice(0, limit)
+    .map(([term]) => term);
+}
+
+function getExplicitKeywordEntries(jobDescription = '') {
+  return (jobDescription || '')
+    .split(/[\n,;|]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => s.length >= 2)
+    .filter((s) => s.length <= 48);
+}
+
+function getKeywordLimit(jobDescription = '') {
+  const explicit = getExplicitKeywordEntries(jobDescription);
+  if (explicit.length >= 2 && explicit.length <= 10) {
+    return explicit.length;
+  }
+  return 8;
+}
+
+function keywordPriorityInJob(keyword, jobDescription = '') {
+  const normKeyword = normalizeForMatch(keyword);
+  const normJob = normalizeForMatch(jobDescription);
+  if (!normKeyword || !normJob) return 0;
+
+  if (normJob.includes(normKeyword)) return 100 + normKeyword.length;
+  const phraseTokens = normKeyword.split(' ').filter((t) => t.length > 1 && !ATS_STOPWORDS.has(t));
+  if (!phraseTokens.length) return 0;
+
+  let hitCount = 0;
+  for (const t of phraseTokens) {
+    if (normJob.includes(t)) hitCount += 1;
+  }
+  return hitCount * 10 + normKeyword.length;
+}
+
+function filterKeywordsFromJobDescription(aiKeywords = [], jobDescription = '') {
+  const maxKeywords = getKeywordLimit(jobDescription);
+  const explicitEntries = getExplicitKeywordEntries(jobDescription);
+  const candidates = [...aiKeywords, ...explicitEntries]
+    .map((k) => (k || '').trim())
+    .filter(Boolean);
+
+  const deduped = Array.from(new Map(
+    candidates.map((k) => [normalizeForMatch(k), k])
+  ).values()).filter(Boolean);
+
+  const matched = deduped
+    .filter((k) => matchesPhraseInText(jobDescription, k))
+    .sort((a, b) => keywordPriorityInJob(b, jobDescription) - keywordPriorityInJob(a, jobDescription))
+    .slice(0, maxKeywords);
+
+  return matched;
+}
+
+function normalizeForMatch(text = '') {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9+.#\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesPhraseInText(text, phrase) {
+  const normText = normalizeForMatch(text);
+  const normPhrase = normalizeForMatch(phrase);
+  if (!normText || !normPhrase) return false;
+  if (normText.includes(normPhrase)) return true;
+
+  const phraseTokens = normPhrase.split(' ').filter((t) => t.length > 1 && !ATS_STOPWORDS.has(t));
+  if (!phraseTokens.length) return false;
+
+  let hits = 0;
+  for (const t of phraseTokens) {
+    if (normText.includes(t)) hits += 1;
+  }
+
+  return (hits / phraseTokens.length) >= 0.7;
+}
+
+function computeRealAtsScore({ optimizedLatex, jobDescription, keywords, providerAtsScore = null }) {
+  const resumePlain = latexToPlainText(optimizedLatex || '');
+  const resumeLower = resumePlain.toLowerCase();
+  const jobLower = (jobDescription || '').toLowerCase();
+
+  const cleanKeywords = Array.from(new Set((keywords || [])
+    .map((k) => (k || '').trim().toLowerCase())
+    .filter((k) => k.length >= 2)
+  ));
+
+  // Focus on highest-signal keywords (similar to ATS evaluators that weigh top requirements).
+  const prioritizedKeywords = [...cleanKeywords]
+    .sort((a, b) => {
+      const aScore = (jobLower.includes(a) ? 3 : 0) + Math.min(a.split(' ').length, 3);
+      const bScore = (jobLower.includes(b) ? 3 : 0) + Math.min(b.split(' ').length, 3);
+      return bScore - aScore || b.length - a.length;
+    })
+    .slice(0, Math.min(12, cleanKeywords.length));
+
+  const matchedKeywordCount = prioritizedKeywords.filter((k) => matchesPhraseInText(resumePlain, k)).length;
+  const keywordCoverage = prioritizedKeywords.length
+    ? matchedKeywordCount / prioritizedKeywords.length
+    : 0;
+
+  const topTerms = buildTopJobTerms(jobDescription, 35);
+  const matchedTopTerms = topTerms.filter((term) => resumeLower.includes(term)).length;
+  const jdCoverage = topTerms.length ? matchedTopTerms / topTerms.length : 0;
+
+  const sectionChecks = [
+    /experience|work history/.test(resumeLower),
+    /skills|technical skills/.test(resumeLower),
+    /education/.test(resumeLower),
+    /project/.test(resumeLower)
+  ];
+  const sectionScore = sectionChecks.filter(Boolean).length / sectionChecks.length;
+
+  const wordCount = tokenize(resumePlain).length;
+  const lengthScore = wordCount >= 220 && wordCount <= 900
+    ? 1
+    : (wordCount >= 150 && wordCount <= 1100 ? 0.75 : 0.5);
+
+  const deterministicScore =
+    (keywordCoverage * 50) +
+    (jdCoverage * 30) +
+    (sectionScore * 10) +
+    (lengthScore * 10);
+
+  const hasProviderScore = Number.isFinite(providerAtsScore);
+  const blendedScore = hasProviderScore
+    ? (deterministicScore * 0.6) + (providerAtsScore * 0.4)
+    : deterministicScore;
+
+  return Math.max(0, Math.min(100, Math.round(blendedScore)));
 }
 
 function enforceOnePageContent(latex) {
@@ -438,18 +609,16 @@ async function optimizeLatex(latexCode, jobDescription) {
   const prompt = `You are an expert ATS resume optimizer. Optimize the given LaTeX resume for the job description.
 
 TASK:
-1. Extract ALL important ATS keywords, skills, tools, technologies, and domain terms from the job description (aim for 20-40 keywords)
-2. Integrate these keywords naturally into the correct resume sections (rephrase existing content, do NOT fabricate)
-3. Preserve ALL existing content — do NOT drop bullet points, shorten skills, or remove sections
-4. Keep all existing sections and hierarchy — only enhance/rephrase content
-5. Add a Skills section if missing
-6. Return a complete LaTeX document and preserve valid LaTeX syntax
-7. Escape LaTeX-sensitive characters in plain text: &, %, $, #, _, {, }, ~, ^
-8. Use proper LaTeX lists (itemize with \\item). Do not output markdown bullets
-9. CRITICAL: Preserve the original visual design exactly (same preamble, colors, fonts, symbols, spacing style, headings style)
-10. CRITICAL: Preserve section order and section names exactly as in the provided LaTeX
-11. Keep all dates on the SAME heading line as role/project title using \\hfill (never date on a separate line)
-12. Do NOT remove or shorten any bullet points or skill entries from the original
+1. Extract only the most important keywords explicitly present in the job description (target 4-8 keywords, no unrelated terms)
+2. Rewrite and improve the resume content for ATS alignment with the job description while staying truthful to the candidate profile
+3. Convert the resume into ATS-friendly structure and headings if needed (Summary, Skills, Experience, Projects, Education, Certifications)
+4. Keep role/project dates on the same line as title using \hfill
+5. Use concise, impact-focused bullet points with strong action verbs and relevant technical terms
+6. Preserve factual correctness: do not invent fake companies, dates, projects, or achievements
+7. Return a complete valid LaTeX document
+8. Escape LaTeX-sensitive characters in plain text: &, %, $, #, _, {, }, ~, ^
+9. Use proper LaTeX lists (itemize with \item). Do not output markdown bullets
+10. Keep output one-page friendly with compact spacing
 
 Respond using EXACTLY this format with these XML tags (nothing else before or after):
 
@@ -471,13 +640,30 @@ ${jobDescription}`;
   const latexMatch = responseText.match(/<LATEX>([\s\S]*?)<\/LATEX>/);
   const keywordsMatch = responseText.match(/<KEYWORDS>([\s\S]*?)<\/KEYWORDS>/);
   const scoreMatch = responseText.match(/<ATS_SCORE>(\d+)<\/ATS_SCORE>/);
-
-  const keywords = keywordsMatch ? keywordsMatch[1].split(',').map(k => k.trim()).filter(Boolean) : [];
-  const atsScore = scoreMatch ? Math.max(0, Math.min(100, parseInt(scoreMatch[1], 10))) : 75;
+  const rawKeywords = keywordsMatch ? keywordsMatch[1].split(',').map(k => k.trim()).filter(Boolean) : [];
+  const keywords = filterKeywordsFromJobDescription(rawKeywords, jobDescription);
+  const providerAtsScore = scoreMatch ? Math.max(0, Math.min(100, parseInt(scoreMatch[1], 10))) : null;
   const originalTemplateLatex = sanitizeLatexDocument(latexCode);
+  const aiGeneratedLatexRaw = latexMatch ? latexMatch[1].trim() : '';
 
-  // Keep user's design/template unchanged: optimize content in-place.
-  const optimizedLatex = injectKeywordsPreservingTemplate(originalTemplateLatex, keywords);
+  let optimizedLatex = originalTemplateLatex;
+
+  // Prefer the model-generated ATS-friendly resume body when valid.
+  if (aiGeneratedLatexRaw) {
+    try {
+      const aiGeneratedLatex = sanitizeLatexDocument(aiGeneratedLatexRaw);
+      optimizedLatex = lockOriginalTheme(originalTemplateLatex, aiGeneratedLatex);
+    } catch (err) {
+      console.warn('Falling back to template-preserving optimization due to invalid AI LaTeX:', err.message);
+    }
+  }
+
+  // Ensure validated JD keywords are present in ATS-relevant sections.
+  optimizedLatex = injectKeywordsPreservingTemplate(optimizedLatex, keywords);
+  optimizedLatex = sanitizeLatexDocument(ensureNoPageNumber(optimizedLatex));
+
+  // Use calibrated ATS scoring with deterministic coverage and provider signal.
+  const atsScore = computeRealAtsScore({ optimizedLatex, jobDescription, keywords, providerAtsScore });
 
   return { optimizedLatex, keywords, atsScore };
 }
