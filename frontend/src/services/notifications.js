@@ -13,10 +13,10 @@ const ensureForegroundListener = () => {
     const body = payload?.notification?.body || 'A new job posting is available'
     const data = payload?.data || {}
 
+    const notificationIcon = payload?.data?.companyImage || payload?.notification?.icon || '/pwa-192.png';
     const notification = new Notification(title, {
       body,
-      icon: payload?.notification?.icon || '/job-icon.jpg',
-      badge: payload?.notification?.badge || '/job-icon.jpg',
+      icon: notificationIcon,
       tag: payload?.notification?.tag || 'new-job'
     })
 

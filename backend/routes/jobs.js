@@ -181,21 +181,23 @@ router.post('/admin', authMiddleware, adminMiddleware, async (req, res) => {
     const notification = {
       title: `New Job: ${payload.jobRole}`,
       body: `${payload.companyName} is hiring!`,
-      icon: '/job-icon.jpg',
-      badge: '/job-icon.jpg',
+      icon: payload.companyPhoto || '/pwa-192.png',
       tag: 'new-job'
     };
     const data = {
       jobId: job._id.toString(),
       companyName: payload.companyName,
-      jobRole: payload.jobRole
+      jobRole: payload.jobRole,
+      companyImage: payload.companyPhoto
     };
 
-    NotificationService.sendToAll(notification, data).catch(err => {
-      console.error('Failed to send push notifications:', err);
-    });
+    const notificationResult = await NotificationService.sendToAll(notification, data);
 
-    res.status(201).json({ message: 'Job posted successfully', job });
+    res.status(201).json({
+      message: 'Job posted successfully',
+      job,
+      notification: notificationResult
+    });
   } catch (err) {
     if (
       err.message === 'Invalid end date' ||

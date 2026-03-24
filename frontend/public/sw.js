@@ -47,8 +47,7 @@ self.addEventListener('push', event => {
   let notificationData = {
     title: 'New Job Alert',
     body: 'A new job posting is available',
-    icon: '/job-icon.jpg',
-    badge: '/job-icon.jpg',
+    icon: '/pwa-192.png',
     tag: 'new-job',
     requireInteraction: false
   };
@@ -57,6 +56,10 @@ self.addEventListener('push', event => {
     parsedData = event.data.json();
     if (parsedData.notification) {
       notificationData = { ...notificationData, ...parsedData.notification };
+    }
+    // Use company image as main icon if available, keep badge as app icon
+    if (parsedData.data?.companyImage) {
+      notificationData.icon = parsedData.data.companyImage;
     }
   } catch (error) {
     // If it's not JSON, use the text as the body

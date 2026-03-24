@@ -13,8 +13,7 @@ function toStringDataMap(data = {}) {
 function buildMessage(notification = {}, data = {}) {
   const title = String(notification.title || 'Notification');
   const body = String(notification.body || '');
-  const icon = notification.icon || '/job-icon.jpg';
-  const badge = notification.badge || icon;
+  const icon = notification.icon || '/pwa-192.png';
   const tag = notification.tag || 'default';
   const requireInteraction = Boolean(notification.requireInteraction);
   const link = data.jobId ? `/?jobId=${String(data.jobId)}` : '/';
@@ -28,13 +27,13 @@ function buildMessage(notification = {}, data = {}) {
     },
     webpush: {
       headers: {
-        TTL: '3600'
+        TTL: '3600',
+        Urgency: 'high'
       },
       notification: {
         title,
         body,
         icon,
-        badge,
         tag,
         requireInteraction
       },
@@ -43,6 +42,21 @@ function buildMessage(notification = {}, data = {}) {
       }
     }
   };
+}
+
+function summarizeFailures(results = []) {
+  return results.reduce((acc, result) => {
+    if (result.status !== 'rejected') return acc;
+    const code = result.reason?.code || 'unknown-error';
+    const message = result.reason?.message || 'Unknown messaging error';
+
+    if (!acc[code]) {
+      acc[code] = { count: 0, message };
+    }
+
+    acc[code].count += 1;
+    return acc;
+  }, {});
 }
 
 class NotificationService {
@@ -95,14 +109,36 @@ class NotificationService {
       }
 
       const failedCount = results.filter(result => result.status === 'rejected').length;
-      console.log(`Notification send summary: success=${tokens.length - failedCount}, failed=${failedCount}`);
+      const failureSummary = summarizeFailures(results);
+      console.log('Notification send summary:', {
+        totalTokens: tokens.length,
+        success: tokens.length - failedCount,
+        failed: failedCount,
+        invalidTokensCleared: invalidTokens.length,
+        failureSummary
+      });
 
       return {
+        totalTokens: tokens.length,
         sent: tokens.length - failedCount,
-        failed: failedCount
+        failed: failedCount,
+        invalidTokensCleared: invalidTokens.length,
+        failureSummary
       };
     } catch (error) {
       console.error('Error sending notifications:', error);
+      return {
+        totalTokens: 0,
+        sent: 0,
+        failed: 0,
+        invalidTokensCleared: 0,
+        failureSummary: {
+          [error?.code || 'send-error']: {
+            count: 1,
+            message: error?.message || 'Failed to send notifications'
+          }
+        }
+      };
     }
   }
 
@@ -115,6 +151,18 @@ class NotificationService {
       return this.sendToUsers(allUsers.map(u => u._id), notification, data);
     } catch (error) {
       console.error('Error sending notifications to all users:', error);
+      return {
+        totalTokens: 0,
+        sent: 0,
+        failed: 0,
+        invalidTokensCleared: 0,
+        failureSummary: {
+          [error?.code || 'send-all-error']: {
+            count: 1,
+            message: error?.message || 'Failed to send notifications to all users'
+          }
+        }
+      };
     }
   }
 
