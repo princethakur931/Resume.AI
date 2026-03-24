@@ -1,5 +1,32 @@
-import { getFirebaseMessagingToken } from './firebase'
+import { getFirebaseMessagingToken, onFirebaseMessageReceived } from './firebase'
 import api from './api'
+
+let foregroundUnsubscribe = null
+
+const ensureForegroundListener = () => {
+  if (foregroundUnsubscribe) return
+
+  foregroundUnsubscribe = onFirebaseMessageReceived(payload => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+
+    const title = payload?.notification?.title || 'New Job Alert'
+    const body = payload?.notification?.body || 'A new job posting is available'
+    const data = payload?.data || {}
+
+    const notification = new Notification(title, {
+      body,
+      icon: payload?.notification?.icon || '/job-icon.jpg',
+      badge: payload?.notification?.badge || '/job-icon.jpg',
+      tag: payload?.notification?.tag || 'new-job'
+    })
+
+    notification.onclick = () => {
+      const target = data.jobId ? `/jobs?jobId=${data.jobId}` : '/jobs'
+      window.open(target, '_blank')
+      notification.close()
+    }
+  })
+}
 
 /**
  * Request notification permission and register token with backend
@@ -36,6 +63,8 @@ export const registerNotificationToken = async () => {
     // Send token to backend
     const response = await api.post('/auth/notification-token', { token })
     console.log('Token registered with backend:', response.data)
+
+    ensureForegroundListener()
     
     return true
   } catch (error) {

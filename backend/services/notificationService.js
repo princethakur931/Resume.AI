@@ -1,6 +1,50 @@
 const { getFirebaseAdmin } = require('./firebaseAdmin');
 const User = require('../models/User');
 
+function toStringDataMap(data = {}) {
+  const entries = Object.entries(data || {});
+  return entries.reduce((acc, [key, value]) => {
+    if (value === undefined || value === null) return acc;
+    acc[key] = String(value);
+    return acc;
+  }, {});
+}
+
+function buildMessage(notification = {}, data = {}) {
+  const title = String(notification.title || 'Notification');
+  const body = String(notification.body || '');
+  const icon = notification.icon || '/job-icon.jpg';
+  const badge = notification.badge || icon;
+  const tag = notification.tag || 'default';
+  const requireInteraction = Boolean(notification.requireInteraction);
+  const link = data.jobId ? `/?jobId=${String(data.jobId)}` : '/';
+
+  return {
+    notification: { title, body },
+    data: toStringDataMap(data),
+    android: {
+      ttl: 3600,
+      priority: 'high'
+    },
+    webpush: {
+      headers: {
+        TTL: '3600'
+      },
+      notification: {
+        title,
+        body,
+        icon,
+        badge,
+        tag,
+        requireInteraction
+      },
+      fcmOptions: {
+        link
+      }
+    }
+  };
+}
+
 class NotificationService {
   /**
    * Send push notification to specific users
@@ -23,20 +67,7 @@ class NotificationService {
       if (tokens.length === 0) return;
 
       const admin = getFirebaseAdmin();
-      const message = {
-        notification,
-        data,
-        android: {
-          ttl: 3600,
-          priority: 'high',
-        },
-        webpush: {
-          ttl: 3600,
-          headers: {
-            TTL: '3600'
-          }
-        }
-      };
+      const message = buildMessage(notification, data);
 
       // Send to all tokens
       const results = await Promise.allSettled(
@@ -63,9 +94,12 @@ class NotificationService {
         );
       }
 
+      const failedCount = results.filter(result => result.status === 'rejected').length;
+      console.log(`Notification send summary: success=${tokens.length - failedCount}, failed=${failedCount}`);
+
       return {
-        sent: tokens.length - invalidTokens.length,
-        failed: invalidTokens.length
+        sent: tokens.length - failedCount,
+        failed: failedCount
       };
     } catch (error) {
       console.error('Error sending notifications:', error);
