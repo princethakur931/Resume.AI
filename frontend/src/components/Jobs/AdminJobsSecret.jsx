@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Briefcase,
   CalendarClock,
+  Eye,
   Lock,
+  Pencil,
   Plus,
   Rocket,
-  ShieldCheck,
   Trash2,
-  Users
+  Users,
+  X
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -28,16 +30,55 @@ const emptyForm = {
 }
 
 function formatDate(date) {
-  return new Date(date).toLocaleDateString('en-IN', {
+  if (!date) return 'Not set'
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return 'Not set'
+
+  return parsed.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
   })
 }
 
+function formatPreviewEndDate(date) {
+  if (!date) return 'No deadline'
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return 'No deadline'
+
+  return parsed.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+}
+
+function getDaysLeft(endDate) {
+  if (!endDate) return null
+  const now = new Date()
+  const end = new Date(endDate)
+  if (Number.isNaN(end.getTime())) return null
+  const diffMs = end.getTime() - now.getTime()
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+}
+
+function toDateInputValue(date) {
+  if (!date) return ''
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().slice(0, 10)
+}
+
+function truncateText(text, maxLength = 170) {
+  if (!text) return 'Not provided'
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength)}...`
+}
+
 export default function AdminJobsSecret() {
   const { user } = useAuth()
   const [form, setForm] = useState(emptyForm)
+  const [photoUrl, setPhotoUrl] = useState('')
   const [photoName, setPhotoName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +86,9 @@ export default function AdminJobsSecret() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [editingJobId, setEditingJobId] = useState('')
+  const [previewJob, setPreviewJob] = useState(null)
+  const fileInputRef = useRef(null)
 
   const activeJobs = useMemo(() => jobs.filter(job => job.isActive).length, [jobs])
 
@@ -66,6 +110,26 @@ export default function AdminJobsSecret() {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (previewJob) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [previewJob])
+
+  const resetForm = () => {
+    setForm(emptyForm)
+    setPhotoUrl('')
+    setPhotoName('')
+    setEditingJobId('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const postJob = async e => {
     e.preventDefault()
     setSubmitting(true)
@@ -73,34 +137,85 @@ export default function AdminJobsSecret() {
     setSuccess('')
 
     try {
-      await api.post('/jobs/admin', form)
-      setSuccess('New job posted successfully')
-      setForm(emptyForm)
-      setPhotoName('')
+      if (editingJobId) {
+        await api.patch(`/jobs/admin/${editingJobId}`, form)
+        setSuccess('Job updated successfully')
+      } else {
+        await api.post('/jobs/admin', form)
+        setSuccess('New job posted successfully')
+      }
+      resetForm()
       fetchJobs()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to post job')
+      setError(err.response?.data?.message || 'Failed to save job')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handlePhotoUpload = e => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const readFileAsDataUrl = file => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Unable to read image file'))
+    reader.readAsDataURL(file)
+  })
 
+  const setCompanyPhotoFromImageFile = async (file, sourceName) => {
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file only')
+      setError('Please use a valid image file')
       return
     }
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setForm(f => ({ ...f, companyPhoto: String(reader.result || '') }))
-      setPhotoName(file.name)
+    try {
+      const imageDataUrl = await readFileAsDataUrl(file)
+      setForm(f => ({ ...f, companyPhoto: imageDataUrl }))
+      setPhotoUrl('')
+      setPhotoName(sourceName || file.name || 'Image selected')
       setError('')
+    } catch {
+      setError('Unable to process image file')
     }
-    reader.readAsDataURL(file)
+  }
+
+  const handlePhotoUpload = async e => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    await setCompanyPhotoFromImageFile(file, file.name)
+  }
+
+  const handlePhotoUrlApply = () => {
+    const trimmedUrl = photoUrl.trim()
+    if (!trimmedUrl) {
+      setForm(f => ({ ...f, companyPhoto: '' }))
+      setPhotoName('')
+      setError('')
+      return
+    }
+
+    try {
+      const normalized = new URL(trimmedUrl).toString()
+      setForm(f => ({ ...f, companyPhoto: normalized }))
+      setPhotoName('Image URL')
+      setError('')
+    } catch {
+      setError('Please enter a valid image URL')
+    }
+  }
+
+  const handlePhotoPaste = async e => {
+    const clipboardItems = Array.from(e.clipboardData?.items || [])
+    const imageItem = clipboardItems.find(item => item.type.startsWith('image/'))
+    if (!imageItem) return
+
+    e.preventDefault()
+    const file = imageItem.getAsFile()
+    if (!file) {
+      setError('Unable to read pasted image')
+      return
+    }
+
+    await setCompanyPhotoFromImageFile(file, 'Pasted image')
   }
 
   const deleteJob = async id => {
@@ -114,6 +229,25 @@ export default function AdminJobsSecret() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete job')
     }
+  }
+
+  const startEditJob = job => {
+    setEditingJobId(job._id)
+    setForm({
+      companyPhoto: job.companyPhoto || '',
+      companyName: job.companyName || '',
+      jobRole: job.jobRole || '',
+      applyUrl: job.applyUrl || '',
+      batchOrEducation: job.batchOrEducation || '',
+      experience: job.experience || '',
+      jobDescription: job.jobDescription || '',
+      endDate: toDateInputValue(job.endDate)
+    })
+    setPhotoUrl(job.companyPhoto && !job.companyPhoto.startsWith('data:') ? job.companyPhoto : '')
+    setPhotoName(job.companyPhoto ? 'Existing image' : '')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setError('')
+    setSuccess('Edit mode enabled. Update fields and click Save Changes.')
   }
 
   if (user?.role !== 'admin') {
@@ -178,52 +312,99 @@ export default function AdminJobsSecret() {
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-5 py-6 sm:py-8 grid lg:grid-cols-[420px,1fr] gap-4 sm:gap-6">
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-4 sm:p-6 h-fit transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_34px_rgba(139,92,246,0.22)]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Post New Job</h2>
+            <h2 className="text-lg font-bold text-white">{editingJobId ? 'Edit Job' : 'Post New Job'}</h2>
             <span className="text-[11px] sm:text-xs text-red-200 bg-red-500/10 border border-red-400/20 rounded-full px-2 py-1 whitespace-nowrap">Hidden Panel</span>
           </div>
 
           <form onSubmit={postJob} className="space-y-3">
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Company Photo Upload</label>
-              <input type="file" accept="image/*" className="input-field text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:border-0 file:bg-white/10 file:text-white file:px-2 sm:file:px-3 file:py-1.5" onChange={handlePhotoUpload} />
-              {!photoName && <p className="text-[11px] text-slate-500 mt-1">Optional: If not uploaded, default company icon will be used.</p>}
-              {photoName && <p className="text-[11px] text-slate-400 mt-1">Uploaded: {photoName}</p>}
+              <label className="text-xs text-slate-500 mb-1 block">Company Photo (Optional)</label>
+              <input ref={fileInputRef} type="file" accept="image/*" className="input-field text-xs sm:text-sm file:mr-2 sm:file:mr-3 file:border-0 file:bg-white/10 file:text-white file:px-2 sm:file:px-3 file:py-1.5" onChange={handlePhotoUpload} />
+
+              <div className="mt-2 flex gap-2">
+                <input
+                  className="input-field"
+                  placeholder="Paste image URL"
+                  value={photoUrl}
+                  onChange={e => setPhotoUrl(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={handlePhotoUrlApply}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-brand-400/30 bg-brand-500/10 text-brand-200 whitespace-nowrap"
+                >
+                  Use URL
+                </button>
+              </div>
+
+              <div
+                onPaste={handlePhotoPaste}
+                className="mt-2 rounded-lg border border-dashed border-white/20 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-400"
+              >
+                Copy image and paste here with Ctrl+V
+              </div>
+
+              {!photoName && <p className="text-[11px] text-slate-500 mt-1">If no image is provided, default company icon will be used.</p>}
+              {photoName && <p className="text-[11px] text-slate-400 mt-1">Selected source: {photoName}</p>}
+
+              {form.companyPhoto && (
+                <div className="mt-2 w-16 h-16 rounded-lg bg-white p-1 ring-1 ring-white/10">
+                  <img
+                    src={form.companyPhoto}
+                    alt="Selected company"
+                    className="w-full h-full rounded object-contain"
+                    onError={e => {
+                      e.currentTarget.src = DEFAULT_COMPANY_PHOTO
+                    }}
+                  />
+                </div>
+              )}
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Company Name</label>
-              <input className="input-field" placeholder="Enter company name" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} required />
+              <input className="input-field" placeholder="Enter company name" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Job Role</label>
-              <input className="input-field" placeholder="Enter job role" value={form.jobRole} onChange={e => setForm(f => ({ ...f, jobRole: e.target.value }))} required />
+              <input className="input-field" placeholder="Enter job role" value={form.jobRole} onChange={e => setForm(f => ({ ...f, jobRole: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Apply Redirect URL</label>
-              <input className="input-field" placeholder="https://company.com/careers/apply" value={form.applyUrl} onChange={e => setForm(f => ({ ...f, applyUrl: e.target.value }))} required />
+              <input className="input-field" placeholder="https://company.com/careers/apply" value={form.applyUrl} onChange={e => setForm(f => ({ ...f, applyUrl: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Batch / Education</label>
-              <input className="input-field" placeholder="ex: BE/BTech 2024-2026" value={form.batchOrEducation} onChange={e => setForm(f => ({ ...f, batchOrEducation: e.target.value }))} required />
+              <input className="input-field" placeholder="ex: BE/BTech 2024-2026" value={form.batchOrEducation} onChange={e => setForm(f => ({ ...f, batchOrEducation: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Experience</label>
-              <input className="input-field" placeholder="ex: 0-2 years" value={form.experience} onChange={e => setForm(f => ({ ...f, experience: e.target.value }))} required />
+              <input className="input-field" placeholder="ex: 0-2 years" value={form.experience} onChange={e => setForm(f => ({ ...f, experience: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Job Description</label>
-              <textarea className="input-field min-h-[120px]" placeholder="Enter full job description" value={form.jobDescription} onChange={e => setForm(f => ({ ...f, jobDescription: e.target.value }))} required />
+              <textarea className="input-field min-h-[120px]" placeholder="Enter full job description" value={form.jobDescription} onChange={e => setForm(f => ({ ...f, jobDescription: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Application End Date</label>
-              <input type="date" className="input-field" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} required />
+              <input type="date" className="input-field" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
             </div>
 
             {error && <p className="text-sm text-red-300">{error}</p>}
             {success && <p className="text-sm text-emerald-300">{success}</p>}
 
             <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white text-sm bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 transition-all duration-200 shadow-[0_8px_20px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_26px_rgba(251,146,60,0.45)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[0_8px_20px_rgba(249,115,22,0.35)]">
-              <Plus className="w-4 h-4" /> {submitting ? 'Posting...' : 'Post Job'}
+              <Plus className="w-4 h-4" /> {submitting ? 'Saving...' : (editingJobId ? 'Save Changes' : 'Post Job')}
             </button>
+
+            {editingJobId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="w-full mt-2 inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white text-sm border border-white/20 bg-white/5 hover:bg-white/10 transition-all duration-200"
+              >
+                Cancel Edit
+              </button>
+            )}
           </form>
         </motion.section>
 
@@ -259,7 +440,7 @@ export default function AdminJobsSecret() {
                       <div className="w-12 h-12 rounded-lg bg-white p-1 ring-1 ring-white/10 grid place-items-center">
                         <img
                           src={job.companyPhoto || DEFAULT_COMPANY_PHOTO}
-                          alt={job.companyName}
+                          alt={job.companyName || 'Company'}
                           className="w-full h-full rounded object-contain"
                           onError={e => {
                             e.currentTarget.src = DEFAULT_COMPANY_PHOTO
@@ -267,34 +448,48 @@ export default function AdminJobsSecret() {
                         />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-white font-semibold break-words [overflow-wrap:anywhere]">Job Role: {job.jobRole}</h3>
-                        <p className="text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Company: {job.companyName}</p>
+                        <h3 className="text-white font-semibold break-words [overflow-wrap:anywhere]">Job Role: {job.jobRole || 'Not provided'}</h3>
+                        <p className="text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Company: {job.companyName || 'Not provided'}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-3 grid sm:grid-cols-3 gap-2 text-xs text-slate-400">
-                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Batch/Education: {job.batchOrEducation}</p>
-                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Experience: {job.experience}</p>
+                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Batch/Education: {job.batchOrEducation || 'Not set'}</p>
+                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Experience: {job.experience || 'Not set'}</p>
                     <p className="glass rounded px-2 py-1 border border-white/[0.07] inline-flex items-center gap-1 transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">
                       <CalendarClock className="w-3.5 h-3.5" /> End Date: {formatDate(job.endDate)}
                     </p>
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Job Description: {job.jobDescription}</p>
+                  <p className="mt-2 text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Job Description: {truncateText(job.jobDescription)}</p>
 
                   <p className="mt-2 text-[11px] text-slate-400 break-all">Apply Redirect URL: {job.applyUrl || 'Not set'}</p>
 
-                  <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                     <div className="text-xs text-slate-300 inline-flex items-center gap-1">
                       <Users className="w-3.5 h-3.5 text-cyan-300" /> Applicants: {job.applicants?.length || 0}
                     </div>
-                    <button
-                      onClick={() => deleteJob(job._id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 bg-red-500/10 text-red-300 whitespace-nowrap"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPreviewJob(job)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 whitespace-nowrap"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button
+                        onClick={() => startEditJob(job)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400/30 bg-amber-500/10 text-amber-200 whitespace-nowrap"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </button>
+                      <button
+                        onClick={() => deleteJob(job._id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 bg-red-500/10 text-red-300 whitespace-nowrap"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -302,6 +497,79 @@ export default function AdminJobsSecret() {
           )}
         </section>
       </main>
+
+      {previewJob && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="glass-card p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar border border-brand-400/20 rounded-2xl"
+          >
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg bg-white p-2 ring-1 ring-white/10 grid place-items-center">
+                  <img
+                    src={previewJob.companyPhoto || DEFAULT_COMPANY_PHOTO}
+                    alt={previewJob.companyName || 'Company'}
+                    className="w-full h-full rounded object-contain"
+                    onError={e => {
+                      e.currentTarget.src = DEFAULT_COMPANY_PHOTO
+                    }}
+                  />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white break-words [overflow-wrap:anywhere]">{previewJob.jobRole || 'Not provided'}</h2>
+                  <p className="text-sm text-slate-400 mt-1">{previewJob.companyName || 'Not provided'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewJob(null)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                  <p className="text-xs text-slate-500 uppercase">Batch / Education: <span className="text-white font-semibold">{previewJob.batchOrEducation || 'Not set'}</span></p>
+                </div>
+                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                  <p className="text-xs text-slate-500 uppercase">Experience: <span className="text-white font-semibold">{previewJob.experience || 'Not set'}</span></p>
+                </div>
+                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                  <p className="text-xs text-slate-500 uppercase">Deadline: <span className="text-white font-semibold">{formatPreviewEndDate(previewJob.endDate)}</span></p>
+                </div>
+                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                  <p className="text-xs text-slate-500 uppercase">Days Left: <span className="text-white font-semibold">{getDaysLeft(previewJob.endDate) === null ? 'N/A' : `${getDaysLeft(previewJob.endDate)} days`}</span></p>
+                </div>
+              </div>
+
+              <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_28px_rgba(139,92,246,0.22)]">
+                <p className="text-xs text-slate-500 uppercase mb-2">Complete Job Description</p>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{previewJob.jobDescription || 'Not provided'}</p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setPreviewJob(null)}
+                  className="flex-1 btn-secondary"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 btn-primary"
+                >
+                  Apply Now
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

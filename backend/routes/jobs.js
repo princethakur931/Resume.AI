@@ -5,18 +5,54 @@ const Job = require('../models/Job');
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg';
 
-const requiredFields = [
-  'companyName',
-  'jobRole',
-  'applyUrl',
-  'batchOrEducation',
-  'experience',
-  'jobDescription',
-  'endDate'
-];
+function normalizeText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildJobPayload(body) {
+  let parsedEndDate = null;
+  const endDateInput = normalizeText(body.endDate);
+  if (endDateInput) {
+    parsedEndDate = new Date(`${endDateInput}T23:59:59.999`);
+    if (Number.isNaN(parsedEndDate.getTime())) {
+      throw new Error('Invalid end date');
+    }
+    if (parsedEndDate <= new Date()) {
+      throw new Error('End date must be in the future');
+    }
+  }
+
+  let parsedApplyUrl = '';
+  const applyUrlInput = normalizeText(body.applyUrl);
+  if (applyUrlInput) {
+    try {
+      parsedApplyUrl = new URL(applyUrlInput).toString();
+    } catch {
+      throw new Error('Invalid apply redirect URL');
+    }
+  }
+
+  const companyPhotoInput = normalizeText(body.companyPhoto);
+
+  return {
+    companyPhoto: companyPhotoInput || DEFAULT_COMPANY_PHOTO,
+    companyName: normalizeText(body.companyName),
+    jobRole: normalizeText(body.jobRole),
+    applyUrl: parsedApplyUrl,
+    batchOrEducation: normalizeText(body.batchOrEducation),
+    experience: normalizeText(body.experience),
+    jobDescription: normalizeText(body.jobDescription),
+    endDate: parsedEndDate
+  };
+}
 
 async function cleanupExpiredJobs() {
-  await Job.deleteMany({ endDate: { $lt: new Date() } });
+  await Job.deleteMany({
+    endDate: {
+      $type: 'date',
+      $lt: new Date()
+    }
+  });
 }
 
 const publicProjection = {
@@ -40,7 +76,11 @@ router.get('/', authMiddleware, async (req, res) => {
       {
         $match: {
           isActive: true,
-          endDate: { $gte: now }
+          $or: [
+            { endDate: { $exists: false } },
+            { endDate: null },
+            { endDate: { $gte: now } }
+          ]
         }
       },
       {
@@ -77,7 +117,15 @@ router.post('/:id/apply', authMiddleware, async (req, res) => {
   try {
     await cleanupExpiredJobs();
     const now = new Date();
-    const job = await Job.findOne({ _id: req.params.id, isActive: true, endDate: { $gte: now } });
+    const job = await Job.findOne({
+      _id: req.params.id,
+      isActive: true,
+      $or: [
+        { endDate: { $exists: false } },
+        { endDate: null },
+        { endDate: { $gte: now } }
+      ]
+    });
     if (!job) return res.status(404).json({ message: 'Job is not available anymore' });
 
     const alreadyApplied = job.applicants.some(applicant => applicant.userId.toString() === req.user._id.toString());
@@ -121,41 +169,41 @@ router.get('/admin/all', authMiddleware, adminMiddleware, async (req, res) => {
 
 router.post('/admin', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        return res.status(400).json({ message: `${field} is required` });
-      }
-    }
-
-    const parsedEndDate = new Date(`${req.body.endDate}T23:59:59.999`);
-    if (Number.isNaN(parsedEndDate.getTime())) {
-      return res.status(400).json({ message: 'Invalid end date' });
-    }
-    if (parsedEndDate <= new Date()) {
-      return res.status(400).json({ message: 'End date must be in the future' });
-    }
-
-    let parsedApplyUrl = '';
-    try {
-      parsedApplyUrl = new URL(req.body.applyUrl).toString();
-    } catch {
-      return res.status(400).json({ message: 'Invalid apply redirect URL' });
-    }
+    const payload = buildJobPayload(req.body);
 
     const job = await Job.create({
-      companyPhoto: req.body.companyPhoto || DEFAULT_COMPANY_PHOTO,
-      companyName: req.body.companyName,
-      jobRole: req.body.jobRole,
-      applyUrl: parsedApplyUrl,
-      batchOrEducation: req.body.batchOrEducation,
-      experience: req.body.experience,
-      jobDescription: req.body.jobDescription,
-      endDate: parsedEndDate,
+      ...payload,
       postedBy: req.user._id
     });
 
     res.status(201).json({ message: 'Job posted successfully', job });
   } catch (err) {
+    if (
+      err.message === 'Invalid end date' ||
+      err.message === 'End date must be in the future' ||
+      err.message === 'Invalid apply redirect URL'
+    ) {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.patch('/admin/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const payload = buildJobPayload(req.body);
+    const job = await Job.findByIdAndUpdate(req.params.id, payload, { new: true });
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    res.json({ message: 'Job updated successfully', job });
+  } catch (err) {
+    if (
+      err.message === 'Invalid end date' ||
+      err.message === 'End date must be in the future' ||
+      err.message === 'Invalid apply redirect URL'
+    ) {
+      return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: err.message });
   }
 });

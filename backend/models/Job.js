@@ -8,14 +8,14 @@ const applicantSchema = new mongoose.Schema({
 }, { _id: false });
 
 const jobSchema = new mongoose.Schema({
-  companyPhoto: { type: String, trim: true, required: true },
-  companyName: { type: String, trim: true, required: true },
-  jobRole: { type: String, trim: true, required: true },
-  applyUrl: { type: String, trim: true, required: true },
-  batchOrEducation: { type: String, trim: true, required: true },
-  experience: { type: String, trim: true, required: true },
-  jobDescription: { type: String, trim: true, required: true },
-  endDate: { type: Date, required: true },
+  companyPhoto: { type: String, trim: true },
+  companyName: { type: String, trim: true },
+  jobRole: { type: String, trim: true },
+  applyUrl: { type: String, trim: true },
+  batchOrEducation: { type: String, trim: true },
+  experience: { type: String, trim: true },
+  jobDescription: { type: String, trim: true },
+  endDate: { type: Date },
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   applicants: [applicantSchema],
   isActive: { type: Boolean, default: true }
