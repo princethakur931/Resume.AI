@@ -11,6 +11,7 @@ import {
   updateProfile,
   signInWithPopup
 } from 'firebase/auth'
+import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -116,3 +117,74 @@ export const applyEmailVerificationCode = code => {
 }
 
 export const getFirebaseIdToken = async user => user.getIdToken()
+
+let messaging = null
+let messagingInitPromise = null
+
+export const initFirebaseMessaging = async () => {
+  if (typeof window === 'undefined') return null
+  if (messaging) return messaging
+  if (messagingInitPromise) return messagingInitPromise
+
+  messagingInitPromise = isMessagingSupported()
+    .then(async supported => {
+      if (!supported) {
+        console.warn('Firebase Messaging not supported in this browser')
+        return null
+      }
+
+      try {
+        messaging = getMessaging(getFirebaseApp())
+        
+        // Request notification permission
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') {
+          console.warn('Notification permission denied')
+          return null
+        }
+
+        return messaging
+      } catch (error) {
+        console.error('Failed to initialize Firebase Messaging:', error)
+        return null
+      }
+    })
+    .catch(error => {
+      console.error('Error in Firebase Messaging init:', error)
+      return null
+    })
+
+  return messagingInitPromise
+}
+
+export const getFirebaseMessagingToken = async () => {
+  try {
+    await initFirebaseMessaging()
+    if (!messaging) return null
+
+    const token = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+    })
+    return token
+  } catch (error) {
+    console.error('Failed to get messaging token:', error)
+    return null
+  }
+}
+
+export const onFirebaseMessageReceived = (callback) => {
+  try {
+    if (!messaging) {
+      console.warn('Messaging not initialized')
+      return null
+    }
+
+    return onMessage(messaging, (payload) => {
+      console.log('Message received:', payload)
+      callback(payload)
+    })
+  } catch (error) {
+    console.error('Error setting up message listener:', error)
+    return null
+  }
+}

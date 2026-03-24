@@ -2,6 +2,7 @@ const router = require('express').Router();
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 const Job = require('../models/Job');
+const NotificationService = require('../services/notificationService');
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg';
 
@@ -174,6 +175,24 @@ router.post('/admin', authMiddleware, adminMiddleware, async (req, res) => {
     const job = await Job.create({
       ...payload,
       postedBy: req.user._id
+    });
+
+    // Send push notifications to all users
+    const notification = {
+      title: `New Job: ${payload.jobRole}`,
+      body: `${payload.companyName} is hiring!`,
+      icon: '/job-icon.jpg',
+      badge: '/job-icon.jpg',
+      tag: 'new-job'
+    };
+    const data = {
+      jobId: job._id.toString(),
+      companyName: payload.companyName,
+      jobRole: payload.jobRole
+    };
+
+    NotificationService.sendToAll(notification, data).catch(err => {
+      console.error('Failed to send push notifications:', err);
     });
 
     res.status(201).json({ message: 'Job posted successfully', job });

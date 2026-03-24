@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   profilePhoto: { type: String, default: '' },
   githubProfile: { type: String, default: '' },
   linkedinProfile: { type: String, default: '' },
+  notificationToken: { type: String, default: '' },
   password: {
     type: String,
     minlength: 6,

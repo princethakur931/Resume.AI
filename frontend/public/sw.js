@@ -38,3 +38,86 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// Handle push notifications
+self.addEventListener('push', event => {
+  if (!event.data) return;
+
+  let notificationData = {
+    title: 'New Job Alert',
+    body: 'A new job posting is available',
+    icon: '/job-icon.jpg',
+    badge: '/job-icon.jpg',
+    tag: 'new-job',
+    requireInteraction: false
+  };
+
+  try {
+    const data = event.data.json();
+    if (data.notification) {
+      notificationData = { ...notificationData, ...data.notification };
+    }
+  } catch (error) {
+    // If it's not JSON, use the text as the body
+    notificationData.body = event.data.text();
+  }
+
+  const pushPromise = self.registration.showNotification(notificationData.title, {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: notificationData.tag,
+    requireInteraction: notificationData.requireInteraction,
+    data: event.data.json().data || {},
+    actions: [
+      {
+        action: 'open',
+        title: 'Open Job'
+      },
+      {
+        action: 'close',
+        title: 'Close'
+      }
+    ]
+  });
+
+  event.waitUntil(pushPromise);
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', event => {
+  const notification = event.notification;
+  const data = notification.data || {};
+
+  if (event.action === 'close') {
+    notification.close();
+    return;
+  }
+
+  // For any other action or click, open the app and navigate to jobs/job details
+  let urlToOpen = '/';
+  if (data.jobId) {
+    urlToOpen = `/?jobId=${data.jobId}`;
+  } else {
+    urlToOpen = '/';
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Check if app is already open
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not open, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+
+  notification.close();
+});
+
