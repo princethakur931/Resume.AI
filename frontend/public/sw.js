@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resume-ai-cache-v2';
+const CACHE_NAME = 'resume-ai-cache-v3';
 const APP_SHELL = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', event => {
