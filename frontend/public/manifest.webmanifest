@@ -4,7 +4,7 @@
   "description": "AI-powered resume optimizer for ATS-friendly resumes.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#070b16",
   "theme_color": "#070b16",
   "icons": [
