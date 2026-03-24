@@ -1,5 +1,5 @@
 import { getFirebaseMessagingToken } from './firebase'
-import { apiClient } from './api'
+import api from './api'
 
 /**
  * Request notification permission and register token with backend
@@ -12,10 +12,12 @@ export const registerNotificationToken = async () => {
       return false
     }
 
+    let registration = null
+
     // Check if service worker is registered (required for push notifications)
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
         console.log('Service Worker registered:', registration)
       } catch (error) {
         console.error('Service Worker registration failed:', error)
@@ -23,7 +25,7 @@ export const registerNotificationToken = async () => {
     }
 
     // Get Firebase messaging token
-    const token = await getFirebaseMessagingToken()
+    const token = await getFirebaseMessagingToken(registration)
     if (!token) {
       console.log('Could not get messaging token')
       return false
@@ -32,7 +34,7 @@ export const registerNotificationToken = async () => {
     console.log('FCM Token:', token)
 
     // Send token to backend
-    const response = await apiClient.post('/auth/notification-token', { token })
+    const response = await api.post('/auth/notification-token', { token })
     console.log('Token registered with backend:', response.data)
     
     return true
@@ -47,7 +49,7 @@ export const registerNotificationToken = async () => {
  */
 export const clearNotificationToken = async () => {
   try {
-    await apiClient.post('/auth/notification-token', { token: '' })
+    await api.post('/auth/notification-token', { token: '' })
     console.log('Notification token cleared')
   } catch (error) {
     console.error('Error clearing notification token:', error)

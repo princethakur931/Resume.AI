@@ -43,6 +43,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   if (!event.data) return;
 
+  let parsedData = {};
   let notificationData = {
     title: 'New Job Alert',
     body: 'A new job posting is available',
@@ -53,9 +54,9 @@ self.addEventListener('push', event => {
   };
 
   try {
-    const data = event.data.json();
-    if (data.notification) {
-      notificationData = { ...notificationData, ...data.notification };
+    parsedData = event.data.json();
+    if (parsedData.notification) {
+      notificationData = { ...notificationData, ...parsedData.notification };
     }
   } catch (error) {
     // If it's not JSON, use the text as the body
@@ -68,7 +69,7 @@ self.addEventListener('push', event => {
     badge: notificationData.badge,
     tag: notificationData.tag,
     requireInteraction: notificationData.requireInteraction,
-    data: event.data.json().data || {},
+    data: parsedData.data || {},
     actions: [
       {
         action: 'open',

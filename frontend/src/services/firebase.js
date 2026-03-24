@@ -157,14 +157,26 @@ export const initFirebaseMessaging = async () => {
   return messagingInitPromise
 }
 
-export const getFirebaseMessagingToken = async () => {
+export const getFirebaseMessagingToken = async (serviceWorkerRegistration = null) => {
   try {
     await initFirebaseMessaging()
     if (!messaging) return null
 
-    const token = await getToken(messaging, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
-    })
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
+    if (!vapidKey) {
+      console.warn('Missing VITE_FIREBASE_VAPID_KEY for web push token generation')
+      return null
+    }
+
+    const tokenOptions = {
+      vapidKey
+    }
+
+    if (serviceWorkerRegistration) {
+      tokenOptions.serviceWorkerRegistration = serviceWorkerRegistration
+    }
+
+    const token = await getToken(messaging, tokenOptions)
     return token
   } catch (error) {
     console.error('Failed to get messaging token:', error)

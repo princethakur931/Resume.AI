@@ -217,13 +217,14 @@ router.put('/profile', auth, async (req, res) => {
 router.post('/notification-token', auth, async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token || typeof token !== 'string') {
+    if (typeof token !== 'string') {
       return res.status(400).json({ message: 'Valid notification token required' });
     }
 
-    req.user.notificationToken = token.trim();
+    const normalizedToken = token.trim();
+    req.user.notificationToken = normalizedToken;
     await req.user.save();
-    res.json({ message: 'Notification token updated' });
+    res.json({ message: normalizedToken ? 'Notification token updated' : 'Notification token cleared' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
