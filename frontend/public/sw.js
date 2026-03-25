@@ -4,24 +4,73 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-com
 const CACHE_NAME = 'resume-ai-cache-v3';
 const APP_SHELL = ['/', '/manifest.webmanifest'];
 
-// Initialize Firebase in the Service Worker
-// Note: Credentials are provided by Firebase Cloud Messaging automatically
-let firebaseInitialized = false;
-const initializeFirebase = async () => {
-  if (firebaseInitialized) return;
+let messagingInitialized = false;
+
+// Initialize Firebase Messaging in Service Worker
+// Firebase is auto-initialized when the main app loads, we just need to get the messaging instance
+const initializeMessaging = () => {
+  if (messagingInitialized) return;
   
   try {
-    // Firebase is initialized automatically by Firebase Cloud Messaging
-    // if the app has already been initialized in the main thread
-    firebaseInitialized = true;
-    console.log('[SW] Firebase initialization checked');
+    if (!firebase.apps || firebase.apps.length === 0) {
+      console.log('[SW] Firebase not initialized yet, will retry...');
+      return;
+    }
+
+    const messaging = firebase.messaging();
+    
+    // Set up background message handler
+    messaging.onBackgroundMessage((payload) => {
+      console.log('[SW] Background message received:', payload);
+      
+      let notificationData = {
+        title: payload?.notification?.title || 'New Job Alert',
+        body: payload?.notification?.body || 'A new job posting is available',
+        icon: payload?.notification?.icon || '/pwa-192.png',
+        tag: payload?.notification?.tag || 'new-job',
+        requireInteraction: false,
+        data: payload?.data || {}
+      };
+
+      // Use company image as main icon if available
+      if (payload?.data?.companyImage) {
+        notificationData.icon = payload.data.companyImage;
+      }
+
+      return self.registration.showNotification(notificationData.title, {
+        body: notificationData.body,
+        icon: notificationData.icon,
+        badge: notificationData.badge,
+        tag: notificationData.tag,
+        requireInteraction: notificationData.requireInteraction,
+        data: notificationData.data,
+        actions: [
+          {
+            action: 'open',
+            title: 'Open Job'
+          },
+          {
+            action: 'close',
+            title: 'Close'
+          }
+        ]
+      });
+    });
+
+    messagingInitialized = true;
+    console.log('[SW] Firebase Messaging initialized for background messages');
   } catch (error) {
-    console.error('[SW] Firebase initialization error:', error);
+    console.warn('[SW] Firebase Messaging init delayed:', error.message);
+    // Retry after a short delay
+    setTimeout(initializeMessaging, 1000);
   }
 };
 
-// Call Firebase initialization immediately
-initializeFirebase();
+// Try to initialize messaging immediately and periodically
+initializeMessaging();
+setInterval(() => {
+  if (!messagingInitialized) initializeMessaging();
+}, 2000);
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -60,48 +109,6 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
-// Handle Firebase Cloud Messaging background notifications
-if (typeof firebase !== 'undefined' && firebase.messaging) {
-  const messaging = firebase.messaging();
-  
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] Background message received:', payload);
-    
-    let notificationData = {
-      title: payload?.notification?.title || 'New Job Alert',
-      body: payload?.notification?.body || 'A new job posting is available',
-      icon: payload?.notification?.icon || '/pwa-192.png',
-      tag: payload?.notification?.tag || 'new-job',
-      requireInteraction: false,
-      data: payload?.data || {}
-    };
-
-    // Use company image as main icon if available
-    if (payload?.data?.companyImage) {
-      notificationData.icon = payload.data.companyImage;
-    }
-
-    return self.registration.showNotification(notificationData.title, {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      tag: notificationData.tag,
-      requireInteraction: notificationData.requireInteraction,
-      data: notificationData.data,
-      actions: [
-        {
-          action: 'open',
-          title: 'Open Job'
-        },
-        {
-          action: 'close',
-          title: 'Close'
-        }
-      ]
-    });
-  });
-}
 
 // Handle notification clicks
 self.addEventListener('notificationclick', event => {
