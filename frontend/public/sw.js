@@ -1,5 +1,27 @@
+importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-compat.js');
+
 const CACHE_NAME = 'resume-ai-cache-v3';
 const APP_SHELL = ['/', '/manifest.webmanifest'];
+
+// Initialize Firebase in the Service Worker
+// Note: Credentials are provided by Firebase Cloud Messaging automatically
+let firebaseInitialized = false;
+const initializeFirebase = async () => {
+  if (firebaseInitialized) return;
+  
+  try {
+    // Firebase is initialized automatically by Firebase Cloud Messaging
+    // if the app has already been initialized in the main thread
+    firebaseInitialized = true;
+    console.log('[SW] Firebase initialization checked');
+  } catch (error) {
+    console.error('[SW] Firebase initialization error:', error);
+  }
+};
+
+// Call Firebase initialization immediately
+initializeFirebase();
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -39,54 +61,47 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Handle push notifications
-self.addEventListener('push', event => {
-  if (!event.data) return;
+// Handle Firebase Cloud Messaging background notifications
+if (typeof firebase !== 'undefined' && firebase.messaging) {
+  const messaging = firebase.messaging();
+  
+  messaging.onBackgroundMessage((payload) => {
+    console.log('[SW] Background message received:', payload);
+    
+    let notificationData = {
+      title: payload?.notification?.title || 'New Job Alert',
+      body: payload?.notification?.body || 'A new job posting is available',
+      icon: payload?.notification?.icon || '/pwa-192.png',
+      tag: payload?.notification?.tag || 'new-job',
+      requireInteraction: false,
+      data: payload?.data || {}
+    };
 
-  let parsedData = {};
-  let notificationData = {
-    title: 'New Job Alert',
-    body: 'A new job posting is available',
-    icon: '/pwa-192.png',
-    tag: 'new-job',
-    requireInteraction: false
-  };
-
-  try {
-    parsedData = event.data.json();
-    if (parsedData.notification) {
-      notificationData = { ...notificationData, ...parsedData.notification };
+    // Use company image as main icon if available
+    if (payload?.data?.companyImage) {
+      notificationData.icon = payload.data.companyImage;
     }
-    // Use company image as main icon if available, keep badge as app icon
-    if (parsedData.data?.companyImage) {
-      notificationData.icon = parsedData.data.companyImage;
-    }
-  } catch (error) {
-    // If it's not JSON, use the text as the body
-    notificationData.body = event.data.text();
-  }
 
-  const pushPromise = self.registration.showNotification(notificationData.title, {
-    body: notificationData.body,
-    icon: notificationData.icon,
-    badge: notificationData.badge,
-    tag: notificationData.tag,
-    requireInteraction: notificationData.requireInteraction,
-    data: parsedData.data || {},
-    actions: [
-      {
-        action: 'open',
-        title: 'Open Job'
-      },
-      {
-        action: 'close',
-        title: 'Close'
-      }
-    ]
+    return self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      requireInteraction: notificationData.requireInteraction,
+      data: notificationData.data,
+      actions: [
+        {
+          action: 'open',
+          title: 'Open Job'
+        },
+        {
+          action: 'close',
+          title: 'Close'
+        }
+      ]
+    });
   });
-
-  event.waitUntil(pushPromise);
-});
+}
 
 // Handle notification clicks
 self.addEventListener('notificationclick', event => {
