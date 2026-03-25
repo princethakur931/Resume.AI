@@ -35,6 +35,20 @@ const serializeUser = (user) => ({
   linkedinProfile: user.linkedinProfile || ''
 });
 
+const sanitizeRemoteImageUrl = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:') return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+};
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -98,7 +112,9 @@ router.post('/firebase', async (req, res) => {
     }
 
     const displayName = name?.trim() || decoded.name || (email ? email.split('@')[0] : 'User');
-    const profilePhoto = decoded.picture || profilePhotoFromClient || '';
+    const profilePhoto = sanitizeRemoteImageUrl(decoded.picture)
+      || sanitizeRemoteImageUrl(profilePhotoFromClient)
+      || '';
     const provider = providerId === 'google.com' ? 'google' : 'firebase';
 
     const lookupQuery = email

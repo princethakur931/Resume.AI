@@ -31,8 +31,8 @@ export default function AuthAction() {
         setStatus('success')
         setMessage('Your email has been verified successfully. You can sign in now.')
       } catch (_err) {
-        setStatus('success')
-        setMessage('Email verification completed. You can sign in now.')
+        setStatus('error')
+        setMessage('This verification link is invalid or expired. Please request a new verification email and try again.')
       }
     }
 

@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
         }
 
         // Register notification token when restoring session
-        registerNotificationToken().catch(err => {
+        registerNotificationToken({ requestPermission: false }).catch(err => {
           console.error('Failed to register notification token:', err)
         })
       } catch {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
     setUser(userData)
     // Register notification token after login
-    registerNotificationToken().catch(err => {
+    registerNotificationToken({ requestPermission: true }).catch(err => {
       console.error('Failed to register notification token:', err)
     })
   }

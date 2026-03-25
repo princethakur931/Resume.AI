@@ -31,8 +31,10 @@ const ensureForegroundListener = () => {
 /**
  * Request notification permission and register token with backend
  */
-export const registerNotificationToken = async () => {
+export const registerNotificationToken = async (options = {}) => {
   try {
+    const { requestPermission = true } = options
+
     // Check if notifications are supported
     if (!('Notification' in window)) {
       console.log('Notifications not supported in this browser')
@@ -40,12 +42,16 @@ export const registerNotificationToken = async () => {
     }
 
     let permission = Notification.permission
-    if (permission === 'default') {
+    if (permission === 'default' && requestPermission) {
       permission = await Notification.requestPermission()
     }
 
     if (permission !== 'granted') {
-      console.log('Notification permission not granted')
+      if (permission === 'default' && !requestPermission) {
+        console.log('Notification permission prompt skipped during silent registration')
+      } else {
+        console.log('Notification permission not granted')
+      }
       return false
     }
 
