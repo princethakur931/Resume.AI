@@ -136,6 +136,18 @@ export default function AdminJobsSecret() {
     setError('')
     setSuccess('')
 
+    if (!form.companyName.trim()) {
+      setError('Company Name is required')
+      setSubmitting(false)
+      return
+    }
+
+    if (!form.jobDescription.trim()) {
+      setError('Job Description is required')
+      setSubmitting(false)
+      return
+    }
+
     try {
       if (editingJobId) {
         await api.patch(`/jobs/admin/${editingJobId}`, form)
@@ -361,8 +373,8 @@ export default function AdminJobsSecret() {
               )}
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Company Name</label>
-              <input className="input-field" placeholder="Enter company name" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} />
+              <label className="text-xs text-slate-500 mb-1 block">Company Name *</label>
+              <input className="input-field" placeholder="Enter company name" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} required />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Job Role</label>
@@ -381,8 +393,8 @@ export default function AdminJobsSecret() {
               <input className="input-field" placeholder="ex: 0-2 years" value={form.experience} onChange={e => setForm(f => ({ ...f, experience: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Job Description</label>
-              <textarea className="input-field min-h-[120px]" placeholder="Enter full job description" value={form.jobDescription} onChange={e => setForm(f => ({ ...f, jobDescription: e.target.value }))} />
+              <label className="text-xs text-slate-500 mb-1 block">Job Description *</label>
+              <textarea className="input-field min-h-[120px]" placeholder="Enter full job description" value={form.jobDescription} onChange={e => setForm(f => ({ ...f, jobDescription: e.target.value }))} required />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Application End Date</label>

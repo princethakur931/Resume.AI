@@ -11,6 +11,17 @@ function normalizeText(value) {
 }
 
 function buildJobPayload(body) {
+  const companyName = normalizeText(body.companyName);
+  const jobDescription = normalizeText(body.jobDescription);
+
+  if (!companyName) {
+    throw new Error('Company name is required');
+  }
+
+  if (!jobDescription) {
+    throw new Error('Job description is required');
+  }
+
   let parsedEndDate = null;
   const endDateInput = normalizeText(body.endDate);
   if (endDateInput) {
@@ -37,12 +48,12 @@ function buildJobPayload(body) {
 
   return {
     companyPhoto: companyPhotoInput || DEFAULT_COMPANY_PHOTO,
-    companyName: normalizeText(body.companyName),
+    companyName,
     jobRole: normalizeText(body.jobRole),
     applyUrl: parsedApplyUrl,
     batchOrEducation: normalizeText(body.batchOrEducation),
     experience: normalizeText(body.experience),
-    jobDescription: normalizeText(body.jobDescription),
+    jobDescription,
     endDate: parsedEndDate
   };
 }
@@ -200,6 +211,8 @@ router.post('/admin', authMiddleware, adminMiddleware, async (req, res) => {
     });
   } catch (err) {
     if (
+      err.message === 'Company name is required' ||
+      err.message === 'Job description is required' ||
       err.message === 'Invalid end date' ||
       err.message === 'End date must be in the future' ||
       err.message === 'Invalid apply redirect URL'
@@ -219,6 +232,8 @@ router.patch('/admin/:id', authMiddleware, adminMiddleware, async (req, res) => 
     res.json({ message: 'Job updated successfully', job });
   } catch (err) {
     if (
+      err.message === 'Company name is required' ||
+      err.message === 'Job description is required' ||
       err.message === 'Invalid end date' ||
       err.message === 'End date must be in the future' ||
       err.message === 'Invalid apply redirect URL'
