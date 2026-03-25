@@ -99,26 +99,37 @@ self.addEventListener('notificationclick', event => {
   }
 
   // For any other action or click, open the app and navigate to jobs/job details
-  let urlToOpen = '/';
+  let urlToOpen = '/jobs';
   if (data.jobId) {
-    urlToOpen = `/?jobId=${data.jobId}`;
+    urlToOpen = `/jobs?jobId=${data.jobId}`;
   } else {
-    urlToOpen = '/';
+    urlToOpen = '/jobs';
   }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      // Check if app is already open
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
+      const sameOriginClient = clientList.find(client => {
+        try {
+          return new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
         }
+      });
+
+      if (sameOriginClient && 'focus' in sameOriginClient) {
+        return sameOriginClient.focus().then(() => {
+          if ('navigate' in sameOriginClient) {
+            return sameOriginClient.navigate(urlToOpen);
+          }
+          return null;
+        });
       }
-      // If not open, open a new window
+
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
+
+      return null;
     })
   );
 

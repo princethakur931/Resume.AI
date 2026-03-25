@@ -9,12 +9,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const stored = localStorage.getItem('user')
-    if (token && stored) {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token')
+      const stored = localStorage.getItem('user')
+
+      if (!token || !stored) {
+        setLoading(false)
+        return
+      }
+
       try {
-        setUser(JSON.parse(stored))
+        const parsedUser = JSON.parse(stored)
+        setUser(parsedUser)
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+
+        // Always refresh role/profile from backend so admin access reflects current server state.
+        const { data } = await api.get('/auth/me')
+        if (data?.user) {
+          localStorage.setItem('user', JSON.stringify(data.user))
+          setUser(data.user)
+        }
+
         // Register notification token when restoring session
         registerNotificationToken().catch(err => {
           console.error('Failed to register notification token:', err)
@@ -22,13 +37,16 @@ export function AuthProvider({ children }) {
       } catch {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        // Recover from malformed cached auth payloads instead of crashing the app.
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
         delete api.defaults.headers.common['Authorization']
+        setUser(null)
+      } finally {
+        setLoading(false)
       }
     }
-    setLoading(false)
+
+    restoreSession()
+
+    return () => {}
   }, [])
 
   const login = (token, userData) => {

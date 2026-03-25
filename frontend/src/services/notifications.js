@@ -78,8 +78,21 @@ export const registerNotificationToken = async () => {
  */
 export const clearNotificationToken = async () => {
   try {
-    await api.post('/auth/notification-token', { token: '' })
-    console.log('Notification token cleared')
+    let tokenToRemove = ''
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration('/')
+      tokenToRemove = (await getFirebaseMessagingToken(registration)) || ''
+    }
+
+    if (!tokenToRemove) {
+      // Fallback to previous behavior when current device token cannot be resolved.
+      await api.post('/auth/notification-token', { token: '' })
+      console.log('Notification tokens cleared')
+      return
+    }
+
+    await api.post('/auth/notification-token', { token: tokenToRemove, action: 'remove' })
+    console.log('Current device notification token removed')
   } catch (error) {
     console.error('Error clearing notification token:', error)
   }

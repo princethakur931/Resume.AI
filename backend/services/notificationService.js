@@ -16,7 +16,7 @@ function buildMessage(notification = {}, data = {}) {
   const icon = notification.icon || '/pwa-192.png';
   const tag = notification.tag || 'default';
   const requireInteraction = Boolean(notification.requireInteraction);
-  const link = data.jobId ? `/?jobId=${String(data.jobId)}` : '/';
+  const link = data.jobId ? `/jobs?jobId=${String(data.jobId)}` : '/jobs';
 
   return {
     notification: { title, body },
@@ -70,22 +70,52 @@ class NotificationService {
     if (!userIds || userIds.length === 0) return;
 
     try {
-      const users = await User.find({ _id: { $in: userIds }, notificationToken: { $ne: '' } });
+      const users = await User.find({ _id: { $in: userIds } });
       
       if (users.length === 0) {
         console.log('No users with notification tokens found');
         return;
       }
 
-      const tokens = users.map(u => u.notificationToken).filter(Boolean);
-      if (tokens.length === 0) return;
+      const tokens = [];
+      users.forEach(user => {
+        if (Array.isArray(user.notificationTokens)) {
+          user.notificationTokens.forEach(token => {
+            if (token) tokens.push(token);
+          });
+        }
+
+        if (user.notificationToken) {
+          tokens.push(user.notificationToken);
+        }
+      });
+
+      const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+      const tokensByUserId = new Map(
+        users.map(user => {
+          const list = [];
+          if (Array.isArray(user.notificationTokens)) list.push(...user.notificationTokens.filter(Boolean));
+          if (user.notificationToken) list.push(user.notificationToken);
+          return [user._id.toString(), [...new Set(list)]];
+        })
+      );
+
+      const tokenToUserId = new Map();
+      for (const [userId, userTokens] of tokensByUserId.entries()) {
+        userTokens.forEach(token => {
+          if (!tokenToUserId.has(token)) tokenToUserId.set(token, userId);
+        });
+      }
+
+      const tokensToSend = uniqueTokens;
+      if (tokensToSend.length === 0) return;
 
       const admin = getFirebaseAdmin();
       const message = buildMessage(notification, data);
 
       // Send to all tokens
       const results = await Promise.allSettled(
-        tokens.map(token => admin.messaging().send({ ...message, token }))
+        tokensToSend.map(token => admin.messaging().send({ ...message, token }))
       );
 
       // Remove invalid tokens
@@ -96,31 +126,43 @@ class NotificationService {
           if (error.code === 'messaging/invalid-registration-token' || 
               error.code === 'messaging/registration-token-not-registered' ||
               error.code === 'messaging/mismatched-credential') {
-            invalidTokens.push(tokens[index]);
+            invalidTokens.push(tokensToSend[index]);
           }
         }
       });
 
       if (invalidTokens.length > 0) {
-        await User.updateMany(
-          { notificationToken: { $in: invalidTokens } },
-          { $set: { notificationToken: '' } }
-        );
+        for (const token of invalidTokens) {
+          const userId = tokenToUserId.get(token);
+          if (!userId) continue;
+
+          const user = users.find(item => item._id.toString() === userId);
+          if (!user) continue;
+
+          const updatedTokens = Array.isArray(user.notificationTokens)
+            ? user.notificationTokens.filter(saved => saved !== token)
+            : [];
+          const legacyToken = user.notificationToken === token ? '' : user.notificationToken;
+
+          user.notificationTokens = updatedTokens;
+          user.notificationToken = legacyToken;
+          await user.save();
+        }
       }
 
       const failedCount = results.filter(result => result.status === 'rejected').length;
       const failureSummary = summarizeFailures(results);
       console.log('Notification send summary:', {
-        totalTokens: tokens.length,
-        success: tokens.length - failedCount,
+        totalTokens: tokensToSend.length,
+        success: tokensToSend.length - failedCount,
         failed: failedCount,
         invalidTokensCleared: invalidTokens.length,
         failureSummary
       });
 
       return {
-        totalTokens: tokens.length,
-        sent: tokens.length - failedCount,
+        totalTokens: tokensToSend.length,
+        sent: tokensToSend.length - failedCount,
         failed: failedCount,
         invalidTokensCleared: invalidTokens.length,
         failureSummary
@@ -147,7 +189,12 @@ class NotificationService {
    */
   static async sendToAll(notification, data = {}) {
     try {
-      const allUsers = await User.find({ notificationToken: { $ne: '' } });
+      const allUsers = await User.find({
+        $or: [
+          { notificationToken: { $ne: '' } },
+          { notificationTokens: { $exists: true, $not: { $size: 0 } } }
+        ]
+      });
       return this.sendToUsers(allUsers.map(u => u._id), notification, data);
     } catch (error) {
       console.error('Error sending notifications to all users:', error);
@@ -172,11 +219,17 @@ class NotificationService {
   static async updateToken(userId, token) {
     try {
       if (!token || token.trim() === '') {
-        await User.findByIdAndUpdate(userId, { $set: { notificationToken: '' } });
+        await User.findByIdAndUpdate(userId, { $set: { notificationToken: '', notificationTokens: [] } });
         return { success: true, message: 'Token cleared' };
       }
 
-      await User.findByIdAndUpdate(userId, { $set: { notificationToken: token } });
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: { notificationToken: token },
+          $addToSet: { notificationTokens: token }
+        }
+      );
       return { success: true, message: 'Token updated' };
     } catch (error) {
       console.error('Error updating notification token:', error);

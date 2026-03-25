@@ -216,15 +216,43 @@ router.put('/profile', auth, async (req, res) => {
 
 router.post('/notification-token', auth, async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, action } = req.body;
     if (typeof token !== 'string') {
       return res.status(400).json({ message: 'Valid notification token required' });
     }
 
     const normalizedToken = token.trim();
+    const existingTokens = Array.isArray(req.user.notificationTokens)
+      ? req.user.notificationTokens.filter(Boolean)
+      : [];
+
+    // Migrate legacy single-token field into token array when present.
+    if (req.user.notificationToken && !existingTokens.includes(req.user.notificationToken)) {
+      existingTokens.push(req.user.notificationToken);
+    }
+
+    if (!normalizedToken) {
+      req.user.notificationToken = '';
+      req.user.notificationTokens = [];
+      await req.user.save();
+      return res.json({ message: 'Notification tokens cleared' });
+    }
+
+    if (action === 'remove') {
+      req.user.notificationTokens = existingTokens.filter(saved => saved !== normalizedToken);
+      req.user.notificationToken = req.user.notificationTokens[0] || '';
+      await req.user.save();
+      return res.json({ message: 'Notification token removed' });
+    }
+
+    if (!existingTokens.includes(normalizedToken)) {
+      existingTokens.push(normalizedToken);
+    }
+
+    req.user.notificationTokens = existingTokens;
     req.user.notificationToken = normalizedToken;
     await req.user.save();
-    res.json({ message: normalizedToken ? 'Notification token updated' : 'Notification token cleared' });
+    res.json({ message: 'Notification token updated', count: req.user.notificationTokens.length });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
