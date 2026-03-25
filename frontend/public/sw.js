@@ -5,16 +5,48 @@ const CACHE_NAME = 'resume-ai-cache-v3';
 const APP_SHELL = ['/', '/manifest.webmanifest'];
 
 let messagingInitialized = false;
+let firebaseConfigReceived = false;
 
-// Initialize Firebase Messaging in Service Worker
-// Firebase is auto-initialized when the main app loads, we just need to get the messaging instance
-const initializeMessaging = () => {
+const getFirebaseConfigFromWorkerUrl = () => {
+  try {
+    const url = new URL(self.location.href);
+    const apiKey = url.searchParams.get('apiKey') || '';
+    const authDomain = url.searchParams.get('authDomain') || '';
+    const projectId = url.searchParams.get('projectId') || '';
+    const storageBucket = url.searchParams.get('storageBucket') || '';
+    const messagingSenderId = url.searchParams.get('messagingSenderId') || '';
+    const appId = url.searchParams.get('appId') || '';
+    const measurementId = url.searchParams.get('measurementId') || '';
+
+    if (!apiKey || !authDomain || !projectId || !messagingSenderId || !appId) {
+      return null;
+    }
+
+    return {
+      apiKey,
+      authDomain,
+      projectId,
+      storageBucket,
+      messagingSenderId,
+      appId,
+      measurementId
+    };
+  } catch {
+    return null;
+  }
+};
+
+// Initialize Firebase Messaging in Service Worker.
+// Unlike the window context, SW must initialize Firebase on its own.
+const initializeMessaging = (firebaseConfig) => {
   if (messagingInitialized) return;
   
   try {
     if (!firebase.apps || firebase.apps.length === 0) {
-      console.log('[SW] Firebase not initialized yet, will retry...');
-      return;
+      if (!firebaseConfig) {
+        return;
+      }
+      firebase.initializeApp(firebaseConfig);
     }
 
     const messaging = firebase.messaging();
@@ -60,17 +92,26 @@ const initializeMessaging = () => {
     messagingInitialized = true;
     console.log('[SW] Firebase Messaging initialized for background messages');
   } catch (error) {
-    console.warn('[SW] Firebase Messaging init delayed:', error.message);
-    // Retry after a short delay
-    setTimeout(initializeMessaging, 1000);
+    console.warn('[SW] Firebase Messaging init failed:', error.message);
   }
 };
 
-// Try to initialize messaging immediately and periodically
-initializeMessaging();
-setInterval(() => {
-  if (!messagingInitialized) initializeMessaging();
-}, 2000);
+self.addEventListener('message', event => {
+  const message = event.data || {};
+  if (message.type !== 'INIT_FIREBASE') return;
+
+  const firebaseConfig = message.payload;
+  if (!firebaseConfig || typeof firebaseConfig !== 'object') return;
+
+  firebaseConfigReceived = true;
+  initializeMessaging(firebaseConfig);
+});
+
+const configFromUrl = getFirebaseConfigFromWorkerUrl();
+if (configFromUrl) {
+  firebaseConfigReceived = true;
+  initializeMessaging(configFromUrl);
+}
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -84,7 +125,11 @@ self.addEventListener('activate', event => {
       keys
         .filter(key => key !== CACHE_NAME)
         .map(key => caches.delete(key))
-    )).then(() => self.clients.claim())
+    )).then(() => self.clients.claim()).then(() => {
+      if (!firebaseConfigReceived) {
+        console.log('[SW] Waiting for Firebase config from client');
+      }
+    })
   );
 });
 
