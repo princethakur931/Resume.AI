@@ -135,14 +135,6 @@ export const initFirebaseMessaging = async () => {
 
       try {
         messaging = getMessaging(getFirebaseApp())
-        
-        // Request notification permission
-        const permission = await Notification.requestPermission()
-        if (permission !== 'granted') {
-          console.warn('Notification permission denied')
-          return null
-        }
-
         return messaging
       } catch (error) {
         console.error('Failed to initialize Firebase Messaging:', error)

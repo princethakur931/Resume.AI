@@ -22,7 +22,7 @@ const ensureForegroundListener = () => {
 
     notification.onclick = () => {
       const target = data.jobId ? `/jobs?jobId=${data.jobId}` : '/jobs'
-      window.open(target, '_blank')
+      window.location.assign(target)
       notification.close()
     }
   })
@@ -39,15 +39,22 @@ export const registerNotificationToken = async () => {
       return false
     }
 
-    let registration = null
+    let permission = Notification.permission
+    if (permission === 'default') {
+      permission = await Notification.requestPermission()
+    }
 
-    // Check if service worker is registered (required for push notifications)
+    if (permission !== 'granted') {
+      console.log('Notification permission not granted')
+      return false
+    }
+
+    let registration = null
     if ('serviceWorker' in navigator) {
-      try {
-        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        console.log('Service Worker registered:', registration)
-      } catch (error) {
-        console.error('Service Worker registration failed:', error)
+      registration = await navigator.serviceWorker.getRegistration('/')
+      if (!registration) {
+        console.log('Service worker not active yet')
+        return false
       }
     }
 
@@ -78,16 +85,21 @@ export const registerNotificationToken = async () => {
  */
 export const clearNotificationToken = async () => {
   try {
-    let tokenToRemove = ''
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+
+    let registration = null
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration('/')
-      tokenToRemove = (await getFirebaseMessagingToken(registration)) || ''
+      registration = await navigator.serviceWorker.getRegistration('/')
+      if (!registration) {
+        console.log('Service worker not active; skip token removal')
+        return
+      }
     }
 
+    const tokenToRemove = (await getFirebaseMessagingToken(registration)) || ''
+
     if (!tokenToRemove) {
-      // Fallback to previous behavior when current device token cannot be resolved.
-      await api.post('/auth/notification-token', { token: '' })
-      console.log('Notification tokens cleared')
+      console.log('No current device notification token to remove')
       return
     }
 
