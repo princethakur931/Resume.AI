@@ -158,18 +158,18 @@ self.addEventListener('fetch', event => {
 // Fallback push handler for cases where Firebase background callback is not ready
 // (for example, after worker restart while app is fully closed).
 self.addEventListener('push', event => {
-  if (messagingInitialized) {
-    // Firebase Messaging handles this path via onBackgroundMessage.
-    return;
-  }
-
   if (!event.data) return;
 
   event.waitUntil((async () => {
     try {
       const payload = event.data.json();
-      const notificationPayload = payload?.notification || {};
-      const dataPayload = payload?.data || {};
+      const nestedFcmPayload = typeof payload?.data?.FCM_MSG === 'string'
+        ? JSON.parse(payload.data.FCM_MSG)
+        : null;
+
+      const normalizedPayload = nestedFcmPayload || payload;
+      const notificationPayload = normalizedPayload?.notification || {};
+      const dataPayload = normalizedPayload?.data || {};
 
       const title = notificationPayload.title || 'New Job Alert';
       const body = notificationPayload.body || 'A new job posting is available';
