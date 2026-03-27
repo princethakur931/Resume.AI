@@ -155,6 +155,51 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// Fallback push handler for cases where Firebase background callback is not ready
+// (for example, after worker restart while app is fully closed).
+self.addEventListener('push', event => {
+  if (messagingInitialized) {
+    // Firebase Messaging handles this path via onBackgroundMessage.
+    return;
+  }
+
+  if (!event.data) return;
+
+  event.waitUntil((async () => {
+    try {
+      const payload = event.data.json();
+      const notificationPayload = payload?.notification || {};
+      const dataPayload = payload?.data || {};
+
+      const title = notificationPayload.title || 'New Job Alert';
+      const body = notificationPayload.body || 'A new job posting is available';
+      const icon = dataPayload.companyImage || notificationPayload.icon || '/pwa-192.png';
+      const tag = notificationPayload.tag || 'new-job';
+      const requireInteraction = notificationPayload.requireInteraction === true;
+
+      await self.registration.showNotification(title, {
+        body,
+        icon,
+        tag,
+        requireInteraction,
+        data: dataPayload,
+        actions: [
+          {
+            action: 'open',
+            title: 'Open Job'
+          },
+          {
+            action: 'close',
+            title: 'Close'
+          }
+        ]
+      });
+    } catch (error) {
+      console.warn('[SW] Push fallback parse/show failed:', error?.message || error);
+    }
+  })());
+});
+
 // Handle notification clicks
 self.addEventListener('notificationclick', event => {
   const notification = event.notification;
