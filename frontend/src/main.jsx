@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import { getServiceWorkerScriptUrl, syncFirebaseConfigToServiceWorker } from './services/notifications'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -12,18 +11,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator) {
   if (import.meta.env.PROD) {
-    navigator.serviceWorker.register(getServiceWorkerScriptUrl())
-      .then(registration => {
-        syncFirebaseConfigToServiceWorker(registration)
-        return navigator.serviceWorker.ready
-      })
-      .then(readyRegistration => {
-        syncFirebaseConfigToServiceWorker(readyRegistration)
-      })
-      .catch(() => {
-        // Ignore registration errors to avoid blocking app startup.
-      })
+    // Register the main PWA service worker for caching / offline support
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Ignore registration errors to avoid blocking app startup.
+    })
+
+    // Register the dedicated Firebase Messaging service worker.
+    // FCM requires a service worker named "firebase-messaging-sw.js" at the root scope
+    // to deliver background push notifications when the app is completely closed.
+    navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(() => {
+      // Non-critical – app still works without background push
+    })
   } else {
+    // In development: unregister all service workers and clear caches
     navigator.serviceWorker.getRegistrations()
       .then(registrations => Promise.all(registrations.map(reg => reg.unregister())))
       .catch(() => {})

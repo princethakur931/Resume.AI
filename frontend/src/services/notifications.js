@@ -8,48 +8,53 @@ let devNotificationSkipLogged = false
 
 const MAX_NOTIFICATION_TOKEN_RETRIES = 3
 
-const serviceWorkerFirebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-}
+// ─── FCM Service Worker Helper ────────────────────────────────────────────────
+//
+// FCM requires the FCM token to be tied to a service worker named
+// "firebase-messaging-sw.js" at the root scope. This SW is generated at build
+// time by vite.config.js with the Firebase config baked in, so it can handle
+// background push messages even when the app is completely closed.
 
-const hasValidServiceWorkerFirebaseConfig = [
-  serviceWorkerFirebaseConfig.apiKey,
-  serviceWorkerFirebaseConfig.authDomain,
-  serviceWorkerFirebaseConfig.projectId,
-  serviceWorkerFirebaseConfig.messagingSenderId,
-  serviceWorkerFirebaseConfig.appId
-].every(Boolean)
+const waitForFcmServiceWorker = async (timeoutMs = 6000) => {
+  if (!('serviceWorker' in navigator)) return null
 
-export const getServiceWorkerScriptUrl = () => {
-  if (!hasValidServiceWorkerFirebaseConfig) return '/sw.js'
+  // Try existing registration first
+  let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
 
-  const params = new URLSearchParams({
-    apiKey: serviceWorkerFirebaseConfig.apiKey,
-    authDomain: serviceWorkerFirebaseConfig.authDomain,
-    projectId: serviceWorkerFirebaseConfig.projectId,
-    storageBucket: serviceWorkerFirebaseConfig.storageBucket || '',
-    messagingSenderId: serviceWorkerFirebaseConfig.messagingSenderId,
-    appId: serviceWorkerFirebaseConfig.appId,
-    measurementId: serviceWorkerFirebaseConfig.measurementId || ''
+  if (registration?.active) return registration
+
+  // Register if not yet registered
+  if (!registration) {
+    try {
+      registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    } catch {
+      // Fall through to timeout wait
+    }
+  }
+
+  if (registration?.active) return registration
+
+  // Wait for the SW to become active
+  const readyPromise = new Promise(resolve => {
+    if (!registration) { resolve(null); return }
+
+    const sw = registration.installing || registration.waiting
+    if (!sw) { resolve(registration.active || null); return }
+
+    sw.addEventListener('statechange', function handler() {
+      if (sw.state === 'activated') {
+        sw.removeEventListener('statechange', handler)
+        resolve(registration)
+      }
+    })
   })
 
-  return `/sw.js?${params.toString()}`
+  const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), timeoutMs))
+
+  return Promise.race([readyPromise, timeoutPromise])
 }
 
-export const syncFirebaseConfigToServiceWorker = registration => {
-  if (!registration?.active || !hasValidServiceWorkerFirebaseConfig) return
-
-  registration.active.postMessage({
-    type: 'INIT_FIREBASE',
-    payload: serviceWorkerFirebaseConfig
-  })
-}
+// ─── Token retry ──────────────────────────────────────────────────────────────
 
 const scheduleNotificationTokenRetry = () => {
   if (!import.meta.env.PROD) return
@@ -65,46 +70,7 @@ const scheduleNotificationTokenRetry = () => {
   }, 2500)
 }
 
-const waitForServiceWorkerRegistration = async (timeoutMs = 4000) => {
-  if (!import.meta.env.PROD) return null
-  if (!('serviceWorker' in navigator)) return null
-
-  let existing = await navigator.serviceWorker.getRegistration('/')
-  if (existing?.active) {
-    syncFirebaseConfigToServiceWorker(existing)
-    return existing
-  }
-
-  if (!existing) {
-    try {
-      existing = await navigator.serviceWorker.register(getServiceWorkerScriptUrl())
-      if (existing?.active) {
-        syncFirebaseConfigToServiceWorker(existing)
-        return existing
-      }
-    } catch {
-      // Registration can fail in unsupported contexts; wait path below still handles fallback.
-    }
-  }
-
-  const readyPromise = navigator.serviceWorker.ready
-    .then(async () => {
-      const readyRegistration = await navigator.serviceWorker.getRegistration('/')
-      return readyRegistration || existing || null
-    })
-    .catch(() => null)
-
-  const timeoutPromise = new Promise(resolve => {
-    setTimeout(() => resolve(null), timeoutMs)
-  })
-
-  const readyRegistration = await Promise.race([readyPromise, timeoutPromise])
-  if (readyRegistration?.active) {
-    syncFirebaseConfigToServiceWorker(readyRegistration)
-  }
-
-  return readyRegistration
-}
+// ─── Foreground message listener ─────────────────────────────────────────────
 
 const ensureForegroundListener = () => {
   if (foregroundUnsubscribe) return
@@ -116,7 +82,7 @@ const ensureForegroundListener = () => {
     const body = payload?.notification?.body || 'A new job posting is available'
     const data = payload?.data || {}
 
-    const notificationIcon = payload?.data?.companyImage || payload?.notification?.icon || '/pwa-192.png';
+    const notificationIcon = payload?.data?.companyImage || payload?.notification?.icon || '/pwa-192.png'
     const notification = new Notification(title, {
       body,
       icon: notificationIcon,
@@ -131,8 +97,13 @@ const ensureForegroundListener = () => {
   })
 }
 
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 /**
- * Request notification permission and register token with backend
+ * Request notification permission and register FCM token with backend.
+ *
+ * The token is tied to firebase-messaging-sw.js so FCM can deliver push
+ * notifications even when the app is completely closed.
  */
 export const registerNotificationToken = async (options = {}) => {
   try {
@@ -166,28 +137,31 @@ export const registerNotificationToken = async (options = {}) => {
       return false
     }
 
-    let registration = null
+    // Wait for the FCM-specific service worker to be active.
+    // This SW handles background push delivery when the app is closed.
+    let fcmRegistration = null
     if ('serviceWorker' in navigator) {
-      registration = await waitForServiceWorkerRegistration()
-      if (!registration) {
-        console.log('Service worker not active yet; skipping token registration for now')
+      fcmRegistration = await waitForFcmServiceWorker()
+      if (!fcmRegistration) {
+        console.log('firebase-messaging-sw.js not active yet; scheduling retry')
         scheduleNotificationTokenRetry()
         return false
       }
     }
 
-    // Get Firebase messaging token
-    const token = await getFirebaseMessagingToken(registration)
+    // Get Firebase FCM token tied to the firebase-messaging-sw.js registration
+    const token = await getFirebaseMessagingToken(fcmRegistration)
     if (!token) {
-      console.log('Could not get messaging token')
+      console.log('Could not get FCM messaging token – check VITE_FIREBASE_VAPID_KEY is set in Vercel env vars')
+      scheduleNotificationTokenRetry()
       return false
     }
 
-    console.log('FCM Token:', token)
+    console.log('FCM Token obtained:', token.substring(0, 20) + '...')
 
     // Send token to backend
     const response = await api.post('/auth/notification-token', { token })
-    console.log('Token registered with backend:', response.data)
+    console.log('FCM token registered with backend:', response.data)
 
     notificationTokenRetryCount = 0
 
@@ -196,8 +170,9 @@ export const registerNotificationToken = async (options = {}) => {
       notificationTokenRetryTimer = null
     }
 
+    // Set up foreground listener for when app is open
     ensureForegroundListener()
-    
+
     return true
   } catch (error) {
     console.error('Error registering notification token:', error)
@@ -213,16 +188,12 @@ export const clearNotificationToken = async () => {
     if (!import.meta.env.PROD) return
     if (!('Notification' in window) || Notification.permission !== 'granted') return
 
-    let registration = null
+    let fcmRegistration = null
     if ('serviceWorker' in navigator) {
-      registration = await waitForServiceWorkerRegistration()
-      if (!registration) {
-        console.log('Service worker not active; skip token removal')
-        return
-      }
+      fcmRegistration = await waitForFcmServiceWorker()
     }
 
-    const tokenToRemove = (await getFirebaseMessagingToken(registration)) || ''
+    const tokenToRemove = (await getFirebaseMessagingToken(fcmRegistration)) || ''
 
     if (!tokenToRemove) {
       console.log('No current device notification token to remove')
