@@ -1,4 +1,4 @@
-FROM node:18-bullseye
+FROM node:20-bullseye
 
 # Install TeX packages so pdflatex compilation works in production.
 RUN apt-get update && apt-get install -y --no-install-recommends \

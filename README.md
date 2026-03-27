@@ -33,7 +33,7 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
 
 ### Prerequisites
 
-1. **Node.js** 18+ ([Download](https://nodejs.org))
+1. **Node.js** 20+ ([Download](https://nodejs.org))
 2. **MongoDB Atlas** account (free tier) — [Sign up](https://www.mongodb.com/cloud/atlas)
 3. **LongCat API Key** — Get from [LongCat Dashboard](https://longcat.chat)
 4. **pdflatex** (optional, for PDF preview)
