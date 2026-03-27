@@ -6,6 +6,81 @@ const APP_SHELL = ['/', '/manifest.webmanifest'];
 
 let messagingInitialized = false;
 let firebaseConfigReceived = false;
+let backgroundUnreadBadgeCount = 0;
+
+const MAX_APP_BADGE_COUNT = 999;
+
+const normalizeBadgeCount = (value) => {
+  const parsed = Number.parseInt(String(value ?? 0), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.min(parsed, MAX_APP_BADGE_COUNT);
+};
+
+const supportsWorkerNavigatorBadge = () => {
+  try {
+    return Boolean(self.navigator && typeof self.navigator.setAppBadge === 'function' && typeof self.navigator.clearAppBadge === 'function');
+  } catch {
+    return false;
+  }
+};
+
+const supportsRegistrationBadge = () => {
+  return Boolean(self.registration && typeof self.registration.setAppBadge === 'function' && typeof self.registration.clearAppBadge === 'function');
+};
+
+const applyWorkerBadgeCount = async (count) => {
+  const normalized = normalizeBadgeCount(count);
+
+  try {
+    if (supportsWorkerNavigatorBadge()) {
+      if (normalized > 0) {
+        await self.navigator.setAppBadge(normalized);
+      } else {
+        await self.navigator.clearAppBadge();
+      }
+    } else if (supportsRegistrationBadge()) {
+      if (normalized > 0) {
+        await self.registration.setAppBadge(normalized);
+      } else {
+        await self.registration.clearAppBadge();
+      }
+    }
+  } catch {
+    // Ignore unsupported badging API errors.
+  }
+
+  return normalized;
+};
+
+const broadcastBadgeCount = async (count) => {
+  try {
+    const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clientList.forEach((client) => {
+      client.postMessage({
+        type: 'BADGE_COUNT_UPDATED',
+        payload: { count }
+      });
+    });
+  } catch {
+    // No-op if clients API is unavailable.
+  }
+};
+
+const setWorkerBadgeCount = async (count) => {
+  backgroundUnreadBadgeCount = normalizeBadgeCount(count);
+  await applyWorkerBadgeCount(backgroundUnreadBadgeCount);
+  await broadcastBadgeCount(backgroundUnreadBadgeCount);
+  return backgroundUnreadBadgeCount;
+};
+
+const incrementWorkerBadgeCount = async (step = 1) => {
+  const amount = Math.max(1, Number.parseInt(String(step), 10) || 1);
+  return setWorkerBadgeCount(backgroundUnreadBadgeCount + amount);
+};
+
+const clearWorkerBadgeCount = async () => {
+  return setWorkerBadgeCount(0);
+};
 
 const getFirebaseConfigFromWorkerUrl = () => {
   try {
@@ -69,24 +144,26 @@ const initializeMessaging = (firebaseConfig) => {
         notificationData.icon = payload.data.companyImage;
       }
 
-      return self.registration.showNotification(notificationData.title, {
-        body: notificationData.body,
-        icon: notificationData.icon,
-        badge: notificationData.badge,
-        tag: notificationData.tag,
-        requireInteraction: notificationData.requireInteraction,
-        data: notificationData.data,
-        actions: [
-          {
-            action: 'open',
-            title: 'Open Job'
-          },
-          {
-            action: 'close',
-            title: 'Close'
-          }
-        ]
-      });
+      return incrementWorkerBadgeCount().then(() =>
+        self.registration.showNotification(notificationData.title, {
+          body: notificationData.body,
+          icon: notificationData.icon,
+          badge: '/pwa-192.png',
+          tag: notificationData.tag,
+          requireInteraction: notificationData.requireInteraction,
+          data: notificationData.data,
+          actions: [
+            {
+              action: 'open',
+              title: 'Open Job'
+            },
+            {
+              action: 'close',
+              title: 'Close'
+            }
+          ]
+        })
+      );
     });
 
     messagingInitialized = true;
@@ -98,13 +175,24 @@ const initializeMessaging = (firebaseConfig) => {
 
 self.addEventListener('message', event => {
   const message = event.data || {};
-  if (message.type !== 'INIT_FIREBASE') return;
+  if (message.type === 'INIT_FIREBASE') {
+    const firebaseConfig = message.payload;
+    if (!firebaseConfig || typeof firebaseConfig !== 'object') return;
 
-  const firebaseConfig = message.payload;
-  if (!firebaseConfig || typeof firebaseConfig !== 'object') return;
+    firebaseConfigReceived = true;
+    initializeMessaging(firebaseConfig);
+    return;
+  }
 
-  firebaseConfigReceived = true;
-  initializeMessaging(firebaseConfig);
+  if (message.type === 'RESET_BADGE') {
+    event.waitUntil(clearWorkerBadgeCount());
+    return;
+  }
+
+  if (message.type === 'SYNC_BADGE_COUNT') {
+    const count = message.payload?.count ?? 0;
+    event.waitUntil(setWorkerBadgeCount(count));
+  }
 });
 
 const configFromUrl = getFirebaseConfigFromWorkerUrl();
@@ -174,30 +262,33 @@ self.addEventListener('notificationclick', event => {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      const sameOriginClient = clientList.find(client => {
-        try {
-          return new URL(client.url).origin === self.location.origin;
-        } catch {
-          return false;
-        }
-      });
-
-      if (sameOriginClient && 'focus' in sameOriginClient) {
-        return sameOriginClient.focus().then(() => {
-          if ('navigate' in sameOriginClient) {
-            return sameOriginClient.navigate(urlToOpen);
+    Promise.all([
+      clearWorkerBadgeCount(),
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        const sameOriginClient = clientList.find(client => {
+          try {
+            return new URL(client.url).origin === self.location.origin;
+          } catch {
+            return false;
           }
-          return null;
         });
-      }
 
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
+        if (sameOriginClient && 'focus' in sameOriginClient) {
+          return sameOriginClient.focus().then(() => {
+            if ('navigate' in sameOriginClient) {
+              return sameOriginClient.navigate(urlToOpen);
+            }
+            return null;
+          });
+        }
 
-      return null;
-    })
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+
+        return null;
+      })
+    ])
   );
 
   notification.close();

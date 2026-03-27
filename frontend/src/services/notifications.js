@@ -5,8 +5,12 @@ let foregroundUnsubscribe = null
 let notificationTokenRetryTimer = null
 let notificationTokenRetryCount = 0
 let devNotificationSkipLogged = false
+let badgeListenerBound = false
+let badgeAutoClearBound = false
 
 const MAX_NOTIFICATION_TOKEN_RETRIES = 3
+const APP_BADGE_STORAGE_KEY = 'resume_ai_unread_badge_count'
+const MAX_APP_BADGE_COUNT = 999
 
 const serviceWorkerFirebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -49,6 +53,140 @@ export const syncFirebaseConfigToServiceWorker = registration => {
     type: 'INIT_FIREBASE',
     payload: serviceWorkerFirebaseConfig
   })
+}
+
+const normalizeBadgeCount = value => {
+  const parsed = Number.parseInt(String(value ?? 0), 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  return Math.min(parsed, MAX_APP_BADGE_COUNT)
+}
+
+const canUseLocalStorage = () => {
+  if (typeof window === 'undefined') return false
+  try {
+    return typeof window.localStorage !== 'undefined'
+  } catch {
+    return false
+  }
+}
+
+const canUseAppBadgeApi = () => {
+  if (typeof navigator === 'undefined') return false
+  return typeof navigator.setAppBadge === 'function' && typeof navigator.clearAppBadge === 'function'
+}
+
+const readStoredBadgeCount = () => {
+  if (!canUseLocalStorage()) return 0
+  try {
+    return normalizeBadgeCount(window.localStorage.getItem(APP_BADGE_STORAGE_KEY) || 0)
+  } catch {
+    return 0
+  }
+}
+
+const writeStoredBadgeCount = count => {
+  if (!canUseLocalStorage()) return
+  try {
+    if (count > 0) {
+      window.localStorage.setItem(APP_BADGE_STORAGE_KEY, String(count))
+    } else {
+      window.localStorage.removeItem(APP_BADGE_STORAGE_KEY)
+    }
+  } catch {
+    // Ignore storage errors in restrictive browser contexts.
+  }
+}
+
+const notifyServiceWorkerBadgeSync = async count => {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration('/')
+    const target = navigator.serviceWorker.controller || registration?.active
+    if (!target) return
+
+    target.postMessage({
+      type: 'SYNC_BADGE_COUNT',
+      payload: { count: normalizeBadgeCount(count) }
+    })
+  } catch {
+    // Best-effort sync to worker.
+  }
+}
+
+const applyAppBadgeCount = async count => {
+  const normalized = normalizeBadgeCount(count)
+  writeStoredBadgeCount(normalized)
+
+  if (!canUseAppBadgeApi()) return normalized
+
+  try {
+    if (normalized > 0) {
+      await navigator.setAppBadge(normalized)
+    } else {
+      await navigator.clearAppBadge()
+    }
+  } catch {
+    // Unsupported platforms should silently fallback.
+  }
+
+  return normalized
+}
+
+export const setAppUnreadBadgeCount = async (count, options = {}) => {
+  const { syncServiceWorker = false } = options
+  const normalized = await applyAppBadgeCount(count)
+  if (syncServiceWorker) {
+    await notifyServiceWorkerBadgeSync(normalized)
+  }
+  return normalized
+}
+
+export const incrementAppUnreadBadgeCount = async (step = 1, options = {}) => {
+  const increment = Math.max(1, Number.parseInt(String(step), 10) || 1)
+  const nextCount = normalizeBadgeCount(readStoredBadgeCount() + increment)
+  return setAppUnreadBadgeCount(nextCount, options)
+}
+
+export const clearAppUnreadBadgeCount = async (options = {}) => {
+  const { syncServiceWorker = true } = options
+  return setAppUnreadBadgeCount(0, { syncServiceWorker })
+}
+
+const bindServiceWorkerBadgeListener = () => {
+  if (badgeListenerBound) return
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+
+  navigator.serviceWorker.addEventListener('message', event => {
+    const message = event.data || {}
+    if (message.type !== 'BADGE_COUNT_UPDATED') return
+
+    const count = message.payload?.count ?? 0
+    applyAppBadgeCount(count)
+  })
+
+  badgeListenerBound = true
+}
+
+const bindBadgeAutoClear = () => {
+  if (badgeAutoClearBound) return
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+
+  const clearIfVisible = () => {
+    if (document.visibilityState === 'visible') {
+      clearAppUnreadBadgeCount({ syncServiceWorker: true })
+    }
+  }
+
+  window.addEventListener('focus', clearIfVisible)
+  document.addEventListener('visibilitychange', clearIfVisible)
+  badgeAutoClearBound = true
+}
+
+export const initializeNotificationBadging = () => {
+  bindServiceWorkerBadgeListener()
+  bindBadgeAutoClear()
+  applyAppBadgeCount(readStoredBadgeCount())
 }
 
 const scheduleNotificationTokenRetry = () => {
@@ -128,6 +266,8 @@ const ensureForegroundListener = () => {
       window.location.assign(target)
       notification.close()
     }
+
+    incrementAppUnreadBadgeCount(1, { syncServiceWorker: true })
   })
 }
 
