@@ -56,6 +56,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/jobs', jobsRoutes);
 
+app.get('/', (req, res) => res.json({ status: 'ok', message: 'Resume.AI API Server Running' }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
