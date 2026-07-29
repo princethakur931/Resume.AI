@@ -159,7 +159,7 @@ export default function AdminJobsSecret() {
       resetForm()
       fetchJobs()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save job')
+      setError(err.response?.data?.message || err.message || 'Failed to save job')
     } finally {
       setSubmitting(false)
     }

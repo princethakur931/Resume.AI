@@ -150,10 +150,15 @@ router.post('/firebase', async (req, res) => {
     return res.json({ token, user: serializeUser(user) });
   } catch (err) {
     const msg = err?.message || 'Firebase authentication failed';
-    const isConfigError = msg.includes('Firebase admin credentials are missing') || msg.includes('Invalid FIREBASE_SERVICE_ACCOUNT_JSON value');
+    const isConfigError =
+      msg.includes('Firebase admin credentials') ||
+      msg.includes('Invalid FIREBASE_SERVICE_ACCOUNT_JSON value') ||
+      msg.includes('Failed to parse private key') ||
+      msg.includes('DECODER routines');
+
     if (isConfigError) {
       return res.status(500).json({
-        message: 'Firebase Admin is not configured on backend. Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY in backend/.env and restart backend.'
+        message: 'Firebase Admin Private Key in backend/.env is incomplete or corrupted. Please replace FIREBASE_PRIVATE_KEY or FIREBASE_SERVICE_ACCOUNT_JSON with the complete json from Firebase Console.'
       });
     }
 

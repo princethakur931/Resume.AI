@@ -4,7 +4,6 @@ function normalizePrivateKey(value = '') {
   if (!value) return value;
 
   let normalized = String(value).trim();
-  // Handle wrapped env values like "-----BEGIN...-----"
   if (
     (normalized.startsWith('"') && normalized.endsWith('"')) ||
     (normalized.startsWith("'") && normalized.endsWith("'"))
@@ -12,13 +11,7 @@ function normalizePrivateKey(value = '') {
     normalized = normalized.slice(1, -1);
   }
 
-  // Support keys stored with either \n or \\n escapes.
-  normalized = normalized
-    .replace(/\\\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\n/g, '\n');
-
-  return normalized;
+  return normalized.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
 }
 
 function buildServiceAccount() {
@@ -57,11 +50,14 @@ function getFirebaseAdmin() {
     throw new Error('Firebase admin credentials are missing');
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-
-  return admin;
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    return admin;
+  } catch (err) {
+    throw new Error(`Firebase admin credentials error: ${err.message}`);
+  }
 }
 
 module.exports = { getFirebaseAdmin };

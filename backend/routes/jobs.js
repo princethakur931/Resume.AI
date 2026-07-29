@@ -37,8 +37,12 @@ function buildJobPayload(body) {
   let parsedApplyUrl = '';
   const applyUrlInput = normalizeText(body.applyUrl);
   if (applyUrlInput) {
+    let formattedUrl = applyUrlInput;
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = `https://${formattedUrl}`;
+    }
     try {
-      parsedApplyUrl = new URL(applyUrlInput).toString();
+      parsedApplyUrl = new URL(formattedUrl).toString();
     } catch {
       throw new Error('Invalid apply redirect URL');
     }
