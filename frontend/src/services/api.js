@@ -29,14 +29,19 @@ api.interceptors.response.use(
   err => {
     if (err.response?.status === 401) {
       const requestUrl = err.config?.url || ''
-      const isAuthRequest = /\/auth\/(login|register|firebase)$/.test(requestUrl)
+      // /auth/me = session check (401 = not logged in, normal)
+      // /auth/(login|register|firebase) = auth screens handle their own errors
+      const isExemptFromRedirect = /\/auth\/(login|register|firebase|me)/.test(requestUrl)
 
-      // Let auth screens handle invalid credentials/provider setup errors.
-      if (!isAuthRequest) {
+      // Only force-redirect to /login for protected API calls (not session/auth requests)
+      if (!isExemptFromRedirect) {
         // Clear any legacy localStorage tokens
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        window.location.href = '/login'
+        // Only redirect if not already on login page to avoid reload loop
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login'
+        }
       }
     }
     return Promise.reject(err)
