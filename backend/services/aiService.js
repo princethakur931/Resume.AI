@@ -1,5 +1,4 @@
-const BASE_URL = process.env.AI_BASE_URL || 'https://api.longcat.chat/anthropic';
-const MODEL    = 'LongCat-Flash-Lite';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const ATS_STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have', 'in', 'is', 'it',
@@ -553,86 +552,378 @@ function sanitizeLatexDocument(rawLatex) {
 }
 
 async function callAI(prompt, maxTokens = 4096) {
-  const key = process.env.LONGCHAT_API_KEY || process.env.ANTHROPIC_API_KEY;
-  const res = await fetch(`${BASE_URL}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'Authorization': `Bearer ${key}`,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const legacyKey = process.env.LONGCHAT_API_KEY || process.env.ANTHROPIC_API_KEY;
 
-  const data = await res.json();
+  if (geminiKey) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: 0.2
+        }
+      })
+    });
 
-  if (!res.ok) {
-    console.error('AI API error:', JSON.stringify(data));
-    throw new Error(data?.error?.message || `AI API error: ${res.status}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error('Gemini API error:', JSON.stringify(data));
+      throw new Error(data?.error?.message || `Gemini API error: ${res.status}`);
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      console.error('Gemini API response missing text:', JSON.stringify(data));
+      throw new Error('No content returned from Gemini API');
+    }
+
+    return text.trim();
   }
 
-  return data.content[0].text.trim();
+  if (legacyKey) {
+    const baseUrl = process.env.AI_BASE_URL || 'https://api.longcat.chat/anthropic';
+    const model = process.env.AI_MODEL || 'LongCat-Flash-Lite';
+    const res = await fetch(`${baseUrl}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': legacyKey,
+        'Authorization': `Bearer ${legacyKey}`,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error('AI API error:', JSON.stringify(data));
+      throw new Error(data?.error?.message || `AI API error: ${res.status}`);
+    }
+    return data.content[0].text.trim();
+  }
+
+  throw new Error('No AI API key configured. Please set GEMINI_API_KEY in environment variables.');
 }
 
 async function convertToLatex(resumeText) {
-  const prompt = `You are an expert LaTeX resume writer. Convert the following resume text into a clean, professional LaTeX resume.
+  const prompt = `You are a senior ATS resume writer, technical recruiter, and LaTeX resume formatting expert.
 
-CRITICAL REQUIREMENTS:
-1. Preserve the EXACT structure and ALL content of the original resume — do NOT drop, shorten, or omit any bullet points, skills, or sections
-2. Include EVERY bullet point, skill, and detail exactly as written in the original
-3. Use a clean, ATS-friendly layout with proper sections
-4. Use standard LaTeX packages only: geometry, fontenc, inputenc, hyperref, titlesec, enumitem, parskip
-5. Do NOT use any exotic packages that may not be installed
-6. Include \\documentclass[10pt]{article}
-7. Use compact vertical spacing: \\setlength{\\parskip}{2pt}, \\setlength{\\itemsep}{1pt}, \\setlength{\\topsep}{2pt} so content fits in 1 page
-8. Include ALL sections present in original: Summary, Technical Skills, Experience, Open Source, Projects, Education, Certifications (whatever is in the original)
-9. Escape LaTeX-sensitive characters in plain text: &, %, $, #, _, {, }, ~, ^
-10. Use proper list environments (itemize + \\item). Never use raw markdown bullets like '-', '*', or '--'
-11. For experience/project/education entries: keep role or project title on ONE line and put dates on the SAME line at right using \\hfill (do not place dates on a separate line)
-12. Keep the original section order/structure unchanged (no section renaming/reordering)
-13. Preserve ALL skills listed under Technical Skills — include every single skill, tool, language, and technology
-14. Output ONLY raw LaTeX from \\documentclass ... \\end{document}; no explanation, no markdown code blocks, no XML tags
+Your ONLY task is to transform the candidate's SOURCE RESUME into a professional, concise, ATS-friendly, job-targeted, strictly one-page LaTeX resume using the mandatory template and rules below.
 
-Resume Text:
-${resumeText}`;
+The final response MUST contain ONLY valid raw LaTeX.
+
+1. PRIMARY OBJECTIVE
+
+Create a resume that:
+- Is optimized for Applicant Tracking Systems (ATS).
+- Uses ONLY factual information supported by the SOURCE RESUME.
+- Prioritizes the candidate's most relevant skills, experience, projects, and achievements.
+- Uses concise, professional, recruiter-friendly language.
+- Targets exactly ONE compiled page.
+- Remains readable and professional without excessive formatting compression.
+- Compiles successfully with standard pdfLaTeX.
+
+Never sacrifice factual accuracy for ATS optimization.
+
+2. STRICT FACTUAL ACCURACY — HIGHEST PRIORITY
+
+Use ONLY information explicitly supported by the SOURCE RESUME.
+NEVER invent, assume, infer, or fabricate: skills, languages, frameworks, tools, databases, cloud services, job responsibilities, project functionality, achievements, metrics, percentages, companies, job titles, employment dates, degrees, universities, GPA, certifications, awards, links, or contact information.
+
+You MAY: rewrite existing information, correct grammar, improve clarity, shorten verbose descriptions, convert paragraphs into strong resume bullets, replace weak verbs with stronger action verbs when meaning remains unchanged.
+
+3. WRITING STYLE
+
+Write concise, professional resume language.
+Prefer: Action Verb + Technical Contribution + Result/Impact
+
+Strong action verbs: Developed, Built, Implemented, Designed, Optimized, Integrated, Automated, Engineered, Deployed, Configured, Analyzed, Reduced, Enhanced.
+
+Avoid: "Worked on", "Responsible for", "Helped with", "Involved in".
+Do NOT use first-person pronouns, excessive adjectives, or generic buzzword claims.
+
+4. BULLET POINT RULES
+
+Experience: Maximum 3 bullets per entry. Prefer 2-3 high-value bullets. Approximately 12-18 words per bullet. Start with a strong action verb.
+Projects: Maximum 3 bullets. Prefer 1-2 when sufficient. Explain implementation, functionality, or impact.
+Do NOT create bullets merely to fill space.
+
+5. SUMMARY RULES
+
+Include Summary ONLY if the source resume contains a summary OR there is enough factual information. Maximum 2-3 short lines. No generic objective statements. No unsupported years of experience or job titles. If a useful factual summary cannot be created, omit the Summary section entirely.
+
+6. TECHNICAL SKILLS RULES
+
+Group skills into logical ATS-readable categories. Use only categories with actual content. Prefer 4-5 compact labeled rows. Include ONLY skills supported by the SOURCE RESUME. Do not duplicate a skill across categories. Do not add proficiency ratings, progress bars, or graphical skill indicators.
+
+Possible categories: Languages, Frameworks & Libraries, Databases, Tools & Platforms, Cloud & DevOps, Data Science & ML.
+
+7. ONE-PAGE ENFORCEMENT
+
+The resume MUST target exactly ONE compiled page.
+- Keep descriptions concise. Remove redundancy. Max 3 bullets per experience/project.
+- Do not add unnecessary vertical spacing, extra sections, or filler content.
+- NEVER shrink font below 10pt, use negative spacing aggressively, or change the supplied margins.
+- If all source content cannot fit on one page, prioritize the most job-relevant and recent content.
+
+8. SECTION HANDLING
+
+Standard preferred sections: SUMMARY, TECHNICAL SKILLS, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATIONS.
+Only include a section when corresponding information exists. DO NOT create empty sections.
+DO NOT output placeholder text such as N/A, Add Here, XXXXX, linkedin.com/in/..., github.com/...
+
+9. HEADER RULES
+
+Full Name centered, large, bold. Contact information centered on the next line with \\quad|\\quad between available fields. Use ONLY fields present in the SOURCE RESUME. Do not invent missing links.
+
+10. DATE AND ALIGNMENT RULES
+
+For EVERY experience entry:
+\\textbf{Job Title} \\hfill \\textit{Date Range}\\\\
+\\textit{Company Name, Location}
+
+For EVERY project:
+\\textbf{Project Name} \\hfill \\textit{Date}\\\\
+\\textit{Tech Stack: ...}
+
+For EVERY education entry:
+\\textbf{Degree Name} \\hfill \\textit{Date Range}\\\\
+\\textit{University Name, Location} \\hfill GPA/CGPA if available
+
+Never put the date on a separate line. Never invent missing dates.
+
+11. LATEX SAFETY
+
+Escape special LaTeX characters in candidate-provided text: & -> \\&, % -> \\%, $ -> \\$, # -> \\#, _ -> \\_
+Do NOT escape valid LaTeX commands. Ensure every opening brace has a closing brace. Every \\begin has a matching \\end.
+
+12. ATS DESIGN RESTRICTIONS
+
+DO NOT use: colors, colored rules, icons, images, text boxes, sidebars, tables, two-column layouts, headers/footers, page numbers, graphical rating systems, custom font packages, TikZ, FontAwesome.
+USE: white background, black text, standard LaTeX fonts, standard bullets, thin section divider rules.
+
+13. MANDATORY LATEX TEMPLATE
+
+Use EXACTLY this preamble. DO NOT change document class, font size, geometry margins, section styling, bullet styling, or baseline stretch:
+
+\\documentclass[10pt]{article}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage[top=0.4in, bottom=0.4in, left=0.5in, right=0.5in]{geometry}
+\\usepackage{enumitem}
+\\usepackage{hyperref}
+\\usepackage{titlesec}
+
+\\pagestyle{empty}
+\\setlength{\\parindent}{0pt}
+\\setlength{\\parskip}{0pt}
+
+\\titleformat{\\section}{\\bfseries\\large}{}{0em}{}[\\vspace{-2pt}\\rule{\\linewidth}{0.5pt}\\vspace{-6pt}]
+\\titlespacing{\\section}{0pt}{6pt}{4pt}
+
+\\setlist[itemize]{leftmargin=1.2em, itemsep=0pt, topsep=1pt, parsep=0pt, partopsep=0pt}
+
+\\renewcommand{\\baselinestretch}{0.96}
+
+\\begin{document}
+
+{\\centering
+{\\LARGE \\textbf{FULL NAME}}\\\\[2pt]
+CONTACT INFO WITH \\quad|\\quad SEPARATORS\\\\
+\\par}
+
+\\vspace{4pt}
+
+\\section*{SUMMARY}
+PROFESSIONAL SUMMARY
+
+\\section*{TECHNICAL SKILLS}
+\\begin{itemize}
+\\item \\textbf{CATEGORY:} SKILLS
+\\end{itemize}
+
+\\section*{EXPERIENCE}
+\\textbf{JOB TITLE} \\hfill \\textit{DATE RANGE}\\\\
+\\textit{COMPANY, LOCATION}
+\\begin{itemize}
+\\item ACHIEVEMENT
+\\end{itemize}
+
+\\section*{PROJECTS}
+\\textbf{PROJECT NAME} \\hfill \\textit{DATE}\\\\
+\\textit{Tech Stack: TECHNOLOGIES}
+\\begin{itemize}
+\\item CONTRIBUTION
+\\end{itemize}
+
+\\section*{EDUCATION}
+\\textbf{DEGREE} \\hfill \\textit{DATE RANGE}\\\\
+\\textit{UNIVERSITY, LOCATION} \\hfill GPA IF AVAILABLE
+
+\\section*{CERTIFICATIONS}
+\\begin{itemize}
+\\item CERTIFICATION -- ISSUER (YEAR)
+\\end{itemize}
+
+\\end{document}
+
+14. ABSOLUTE OUTPUT CONTRACT
+
+Your response MUST:
+1. Begin EXACTLY with: \\documentclass
+2. End EXACTLY with: \\end{document}
+3. Contain ONLY raw LaTeX.
+4. NOT contain Markdown code fences, explanations, comments about changes, JSON, XML, analysis, or placeholder values.
+
+Failure to follow the output contract means the response is invalid.
+
+INPUT DATA
+
+SOURCE RESUME:
+<<<RESUME_START>>>
+${resumeText}
+<<<RESUME_END>>>
+
+JOB DESCRIPTION:
+<<<JOB_DESCRIPTION_START>>>
+Not provided — optimize for the candidate's apparent professional domain using only information in the SOURCE RESUME.
+<<<JOB_DESCRIPTION_END>>>`;
 
   let latex = await callAI(prompt, 8000);
   return ensureNoPageNumber(sanitizeLatexDocument(latex));
 }
 
 async function optimizeLatex(latexCode, jobDescription) {
-  const prompt = `You are an expert ATS resume optimizer. Optimize the given LaTeX resume for the job description.
+  const prompt = `You are a senior ATS resume writer, technical recruiter, and LaTeX resume formatting expert.
 
-TASK:
-1. Extract only the most important keywords explicitly present in the job description (target 4-8 keywords, no unrelated terms)
-2. Rewrite and improve the resume content for ATS alignment with the job description while staying truthful to the candidate profile
-3. Convert the resume into ATS-friendly structure and headings if needed (Summary, Skills, Experience, Projects, Education, Certifications)
-4. Keep role/project dates on the same line as title using \hfill
-5. Use concise, impact-focused bullet points with strong action verbs and relevant technical terms
-6. Preserve factual correctness: do not invent fake companies, dates, projects, or achievements
-7. Return a complete valid LaTeX document
-8. Escape LaTeX-sensitive characters in plain text: &, %, $, #, _, {, }, ~, ^
-9. Use proper LaTeX lists (itemize with \item). Do not output markdown bullets
-10. Keep output one-page friendly with compact spacing
+Your ONLY task is to transform the candidate's SOURCE RESUME (provided as LaTeX) into a professional, concise, ATS-friendly, job-targeted, strictly one-page LaTeX resume optimized for the provided JOB DESCRIPTION.
 
-Respond using EXACTLY this format with these XML tags (nothing else before or after):
+1. PRIMARY OBJECTIVE
+
+Create a resume that:
+- Is fully optimized for the provided JOB DESCRIPTION.
+- Uses ONLY factual information supported by the SOURCE RESUME.
+- Prioritizes the candidate's most relevant skills, experience, projects, and achievements for this specific job.
+- Uses concise, professional, recruiter-friendly language.
+- Targets exactly ONE compiled page.
+- Compiles successfully with standard pdfLaTeX.
+
+Never sacrifice factual accuracy for ATS optimization.
+
+2. STRICT FACTUAL ACCURACY — HIGHEST PRIORITY
+
+Use ONLY information explicitly supported by the SOURCE RESUME.
+NEVER invent, assume, infer, or fabricate: skills, languages, frameworks, tools, databases, cloud services, job responsibilities, project functionality, achievements, metrics, percentages, companies, job titles, employment dates, degrees, universities, GPA, certifications, awards, links, or contact information.
+
+You MAY: rewrite existing information, correct grammar, improve clarity, shorten verbose descriptions, replace weak verbs with stronger action verbs, reorder words for better ATS matching, use JD terminology ONLY when the SOURCE RESUME clearly supports the same concept.
+
+3. ATS OPTIMIZATION
+
+Identify important JD keywords: technical skills, frameworks, databases, tools, engineering concepts, role-specific terminology.
+Compare against SOURCE RESUME. Naturally include ONLY keywords that are BOTH relevant to the JD AND supported by the source resume.
+Do NOT keyword-stuff. Do NOT repeat keywords unnaturally. Never add unsupported keywords.
+
+4. WRITING STYLE
+
+Prefer: Action Verb + Technical Contribution + Result/Impact
+Strong verbs: Developed, Built, Implemented, Designed, Optimized, Integrated, Automated, Engineered, Deployed, Analyzed, Reduced, Enhanced.
+Avoid: "Worked on", "Responsible for", "Helped with". Do NOT use first-person pronouns.
+
+5. BULLET RULES
+
+Experience: Max 3 bullets per entry, ~12-18 words each, start with action verb.
+Projects: Max 3 bullets, prefer 1-2. No filler bullets.
+
+6. ONE-PAGE ENFORCEMENT
+
+Must compile to exactly ONE page. Max 3 bullets per entry. Keep Summary to 2-3 lines. Keep Skills compact. No unnecessary sections or filler.
+NEVER shrink font below 10pt or change supplied margins.
+
+7. SECTION HANDLING
+
+Standard sections: SUMMARY, TECHNICAL SKILLS, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATIONS.
+Only include sections with actual content. DO NOT create empty sections. DO NOT output placeholder text.
+
+8. DATE AND ALIGNMENT RULES
+
+\\textbf{Job Title} \\hfill \\textit{Date Range}\\\\
+\\textit{Company Name, Location}
+
+\\textbf{Project Name} \\hfill \\textit{Date}\\\\
+\\textit{Tech Stack: ...}
+
+\\textbf{Degree} \\hfill \\textit{Date Range}\\\\
+\\textit{University, Location} \\hfill GPA if available
+
+Never put date on a separate line. Never invent missing dates.
+
+9. LATEX SAFETY
+
+Escape special chars in candidate text: & -> \\&, % -> \\%, $ -> \\$, # -> \\#, _ -> \\_
+Do NOT escape valid LaTeX commands. Ensure balanced braces and matched environments.
+
+10. ATS DESIGN RESTRICTIONS
+
+DO NOT use: colors, icons, images, text boxes, tables, two-column layouts, page numbers, custom fonts, TikZ, FontAwesome.
+USE: white background, black text, standard LaTeX fonts, standard bullets, thin section rules.
+
+11. MANDATORY LATEX TEMPLATE — DO NOT CHANGE PREAMBLE
+
+\\documentclass[10pt]{article}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage[top=0.4in, bottom=0.4in, left=0.5in, right=0.5in]{geometry}
+\\usepackage{enumitem}
+\\usepackage{hyperref}
+\\usepackage{titlesec}
+
+\\pagestyle{empty}
+\\setlength{\\parindent}{0pt}
+\\setlength{\\parskip}{0pt}
+
+\\titleformat{\\section}{\\bfseries\\large}{}{0em}{}[\\vspace{-2pt}\\rule{\\linewidth}{0.5pt}\\vspace{-6pt}]
+\\titlespacing{\\section}{0pt}{6pt}{4pt}
+
+\\setlist[itemize]{leftmargin=1.2em, itemsep=0pt, topsep=1pt, parsep=0pt, partopsep=0pt}
+
+\\renewcommand{\\baselinestretch}{0.96}
+
+12. ABSOLUTE OUTPUT CONTRACT
+
+Respond using EXACTLY this format (nothing else before or after):
 
 <LATEX>
-[complete optimized LaTeX code here]
+[complete optimized LaTeX code from \\documentclass to \\end{document}]
 </LATEX>
 <KEYWORDS>keyword1, keyword2, keyword3, keyword4, keyword5</KEYWORDS>
 <ATS_SCORE>85</ATS_SCORE>
 
-Current LaTeX Resume:
-${latexCode}
+The <LATEX> block must begin with \\documentclass and end with \\end{document}.
+The <KEYWORDS> block: 4-8 most important JD keywords that are supported by and naturally included in the resume.
+The <ATS_SCORE> block: integer 0-100 reflecting how well the optimized resume matches the JD.
 
-Job Description:
-${jobDescription}`;
+INPUT DATA
+
+SOURCE RESUME:
+<<<RESUME_START>>>
+${latexCode}
+<<<RESUME_END>>>
+
+JOB DESCRIPTION:
+<<<JOB_DESCRIPTION_START>>>
+${jobDescription}
+<<<JOB_DESCRIPTION_END>>>`;
+
 
   const responseText = await callAI(prompt, 6000);
 

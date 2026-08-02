@@ -5,7 +5,7 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
 ## 🚀 Features
 
 - **Upload Resume** — PDF, DOCX, or TXT format
-- **AI LaTeX Conversion** — LongCat AI converts your resume to clean LaTeX code
+- **AI LaTeX Conversion** — Gemini AI converts your resume to clean LaTeX code
 - **Job Description Analysis** — Extract critical ATS keywords automatically
 - **Keyword Optimization** — Inject keywords into correct resume sections
 - **PDF Compilation** — Compile to professional PDF via pdflatex
@@ -26,7 +26,7 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
 **Backend:**
 - Express.js
 - MongoDB Atlas
-- LongCat AI (Claude-compatible API)
+- Google Gemini AI (gemini-2.5-flash)
 - pdflatex (LaTeX compilation)
 
 ## 🛠️ Setup
@@ -35,7 +35,7 @@ AI-powered resume optimizer that converts your resume to LaTeX, optimizes it wit
 
 1. **Node.js** 20+ ([Download](https://nodejs.org))
 2. **MongoDB Atlas** account (free tier) — [Sign up](https://www.mongodb.com/cloud/atlas)
-3. **LongCat API Key** — Get from [LongCat Dashboard](https://longcat.chat)
+3. **Gemini API Key** — Get from [Google AI Studio](https://aistudio.google.com)
 4. **pdflatex** (optional, for PDF preview)
    - Windows: [MiKTeX](https://miktex.org/download)
    - Mac: `brew install mactex-no-gui`
@@ -68,8 +68,7 @@ Create `backend/.env`:
 PORT=5000
 MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_super_secret_jwt_key
-LONGCHAT_API_KEY=your_longcat_api_key_here
-AI_BASE_URL=https://api.longcat.chat/anthropic
+GEMINI_API_KEY=your_gemini_api_key_here
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ADMIN_EMAILS=admin@example.com
@@ -104,11 +103,11 @@ VITE_FIREBASE_APP_ID=your_firebase_app_id
 - Replace `<username>:<password>` with your credentials
 - Paste in `MONGODB_URI`
 
-**4. Get LongCat API Key**
+**4. Get Gemini API Key**
 
-- Visit [LongCat Chat](https://longcat.chat)
-- Sign in → API Keys → Create new key
-- Copy key and paste in `LONGCHAT_API_KEY`
+- Visit [Google AI Studio](https://aistudio.google.com)
+- Create API key
+- Copy key and paste in `GEMINI_API_KEY`
 
 ### Run
 
@@ -185,10 +184,8 @@ Resume.AI/
 - Restart backend after installation
 - If still fails, use "Open in Overleaf" button
 
-**LongCat API error:**
-- Verify `LONGCHAT_API_KEY` is correct
-- Check `AI_BASE_URL=https://api.longcat.chat/anthropic`
-- Model must be `LongCat-Flash-Lite` (configured automatically)
+**Gemini API error:**
+- Verify `GEMINI_API_KEY` is correct
 
 
 ## 📝 License
