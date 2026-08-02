@@ -62,7 +62,7 @@ export default function Login() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    navigate('/dashboard')
+    navigate('/')
   }
 
   const handleGoogleLogin = async () => {

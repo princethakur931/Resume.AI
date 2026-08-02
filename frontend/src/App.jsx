@@ -40,7 +40,7 @@ function PrivateRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
-  return !user ? children : <Navigate to="/dashboard" replace />
+  return !user ? children : <Navigate to="/" replace />
 }
 
 function AdminSecretRoute({ children }) {

@@ -54,7 +54,7 @@ export default function Register() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    window.location.href = '/dashboard'
+    window.location.href = '/'
   }
 
   const handleSubmit = async e => {
