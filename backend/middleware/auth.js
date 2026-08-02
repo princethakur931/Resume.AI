@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 module.exports = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  // Read token from httpOnly cookie first, then fall back to Authorization header
+  const token = req.cookies?.jwt_token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'No token provided' });
 
   try {

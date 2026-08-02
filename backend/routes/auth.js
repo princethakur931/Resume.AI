@@ -1,12 +1,53 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { getFirebaseAdmin } = require('../services/firebaseAdmin');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+// Set secure httpOnly cookie (cross-domain: SameSite=None requires Secure=true)
+const setAuthCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.cookie('jwt_token', token, {
+    httpOnly: true,                        // JS cannot access this cookie
+    secure: isProduction,                  // HTTPS only in production
+    sameSite: isProduction ? 'None' : 'Lax', // None for cross-domain (Vercel→Render)
+    maxAge: 7 * 24 * 60 * 60 * 1000,     // 7 days in ms
+    path: '/'
+  });
+};
+
+// Rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 10,                    // max 10 login attempts
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { message: 'Too many login attempts. Please try again after 15 minutes.' }
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: 5,                     // max 5 registrations per IP per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { message: 'Too many accounts created from this IP. Please try again after 1 hour.' }
+});
+
+const firebaseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 20,                    // Firebase auth is already secure, higher limit
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+  message: { message: 'Too many authentication attempts. Please try again after 15 minutes.' }
+});
 
 const adminEmails = (process.env.ADMIN_EMAILS || '')
   .split(',')
@@ -49,11 +90,20 @@ const sanitizeRemoteImageUrl = (value) => {
   }
 };
 
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ message: 'All fields required' });
+
+    if (password.length < 8)
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+
+    if (!/[A-Z]/.test(password))
+      return res.status(400).json({ message: 'Password must contain at least one uppercase letter' });
+
+    if (!/\d/.test(password))
+      return res.status(400).json({ message: 'Password must contain at least one number' });
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered' });
@@ -61,13 +111,15 @@ router.post('/register', async (req, res) => {
     const role = resolveRoleByEmail(email);
     const user = await User.create({ name, email, password, role });
     const token = signToken(user._id);
+    setAuthCookie(res, token);
     res.status(201).json({ token, user: serializeUser(user) });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Register error:', err);
+    res.status(500).json({ message: 'Registration failed. Please try again.' });
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
@@ -89,13 +141,16 @@ router.post('/login', async (req, res) => {
     }
 
     const token = signToken(user._id);
+    setAuthCookie(res, token);
     res.json({ token, user: serializeUser(user) });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
 
-router.post('/firebase', async (req, res) => {
+
+router.post('/firebase', firebaseLimiter, async (req, res) => {
   try {
     const { idToken, name, profilePhoto: profilePhotoFromClient } = req.body;
     if (!idToken) return res.status(400).json({ message: 'Firebase ID token is required' });
@@ -147,6 +202,7 @@ router.post('/firebase', async (req, res) => {
     }
 
     const token = signToken(user._id);
+    setAuthCookie(res, token);
     return res.json({ token, user: serializeUser(user) });
   } catch (err) {
     const msg = err?.message || 'Firebase authentication failed';
@@ -173,6 +229,18 @@ router.get('/me', auth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+router.post('/logout', (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('jwt_token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'None' : 'Lax',
+    path: '/'
+  });
+  res.json({ message: 'Logged out successfully' });
+});
+
 
 router.post('/profile/photo', auth, (req, res) => {
   imageUpload.single('photo')(req, res, async (uploadErr) => {
@@ -270,7 +338,13 @@ router.post('/notification-token', auth, async (req, res) => {
       existingTokens.push(normalizedToken);
     }
 
-    req.user.notificationTokens = existingTokens;
+    // Cap tokens at 10 devices per user to prevent DB bloat
+    const MAX_TOKENS = 10;
+    const trimmedTokens = existingTokens.length > MAX_TOKENS
+      ? existingTokens.slice(-MAX_TOKENS)
+      : existingTokens;
+
+    req.user.notificationTokens = trimmedTokens;
     req.user.notificationToken = normalizedToken;
     await req.user.save();
     res.json({ message: 'Notification token updated', count: req.user.notificationTokens.length });

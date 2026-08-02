@@ -10,6 +10,19 @@ function normalizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function sanitizeHttpsUrl(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:') return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
 function buildJobPayload(body) {
   const companyName = normalizeText(body.companyName);
   const jobDescription = normalizeText(body.jobDescription);
@@ -51,7 +64,7 @@ function buildJobPayload(body) {
   const companyPhotoInput = normalizeText(body.companyPhoto);
 
   return {
-    companyPhoto: companyPhotoInput || DEFAULT_COMPANY_PHOTO,
+    companyPhoto: sanitizeHttpsUrl(companyPhotoInput) || DEFAULT_COMPANY_PHOTO,
     companyName,
     jobRole: normalizeText(body.jobRole),
     applyUrl: parsedApplyUrl,

@@ -184,7 +184,9 @@ export const onFirebaseMessageReceived = (callback) => {
     }
 
     return onMessage(messaging, (payload) => {
-      console.log('Message received:', payload)
+      if (import.meta.env.DEV) {
+        console.log('Message received (dev only):', payload)
+      }
       callback(payload)
     })
   } catch (error) {

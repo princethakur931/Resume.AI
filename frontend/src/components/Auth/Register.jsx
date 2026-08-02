@@ -25,8 +25,9 @@ function GoogleColorIcon() {
 }
 
 const passwordChecks = [
-  { label: 'At least 6 characters', test: v => v.length >= 6 },
+  { label: 'At least 8 characters', test: v => v.length >= 8 },
   { label: 'Contains a number', test: v => /\d/.test(v) },
+  { label: 'Contains an uppercase letter', test: v => /[A-Z]/.test(v) },
 ]
 
 export default function Register() {
@@ -183,7 +184,7 @@ export default function Register() {
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   className="input-field pl-10 pr-10"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
                 <button
                   type="button"

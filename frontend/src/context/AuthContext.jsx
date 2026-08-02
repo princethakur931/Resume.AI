@@ -10,20 +10,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const restoreSession = async () => {
-      const token = localStorage.getItem('token')
+      // Try to restore session via httpOnly cookie (no localStorage token needed)
       const stored = localStorage.getItem('user')
 
-      if (!token || !stored) {
-        setLoading(false)
-        return
-      }
-
       try {
-        const parsedUser = JSON.parse(stored)
-        setUser(parsedUser)
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-
-        // Always refresh role/profile from backend so admin access reflects current server state.
+        // Validate session with backend — cookie is sent automatically
         const { data } = await api.get('/auth/me')
         if (data?.user) {
           localStorage.setItem('user', JSON.stringify(data.user))
@@ -35,9 +26,10 @@ export function AuthProvider({ children }) {
           console.error('Failed to register notification token:', err)
         })
       } catch {
-        localStorage.removeItem('token')
+        // Cookie invalid/expired — clear local cache
         localStorage.removeItem('user')
-        delete api.defaults.headers.common['Authorization']
+        // Also clear any legacy token from old localStorage approach
+        localStorage.removeItem('token')
         setUser(null)
       } finally {
         setLoading(false)
@@ -50,9 +42,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = (token, userData) => {
-    localStorage.setItem('token', token)
+    // token is still returned in body for backward compat, but we rely on httpOnly cookie now
+    // Store only non-sensitive user data in localStorage for quick UI render
     localStorage.setItem('user', JSON.stringify(userData))
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    // Remove any legacy token from localStorage
+    localStorage.removeItem('token')
     setUser(userData)
     // Register notification token after login
     registerNotificationToken({ requestPermission: true }).catch(err => {
@@ -60,10 +54,15 @@ export function AuthProvider({ children }) {
     })
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
+  const logout = async () => {
+    try {
+      // Tell backend to clear the httpOnly cookie
+      await api.post('/auth/logout')
+    } catch {
+      // Ignore errors — proceed with local cleanup anyway
+    }
     localStorage.removeItem('user')
-    delete api.defaults.headers.common['Authorization']
+    localStorage.removeItem('token')  // Clear any legacy token
     setUser(null)
     // Clear notification token on logout
     clearNotificationToken().catch(err => {

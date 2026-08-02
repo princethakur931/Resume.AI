@@ -8,6 +8,9 @@ try {
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/auth');
 const resumeRoutes = require('./routes/resume');
@@ -32,8 +35,31 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://firebaseapp.com', 'https://*.googleapis.com', 'https://*.google.com'],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  crossOriginEmbedderPolicy: false  // Disable to avoid breaking Firebase Auth popups
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// NoSQL injection protection — strips $ and . from request body keys
+app.use(mongoSanitize());
+
+// Cookie parser for httpOnly JWT cookies
+app.use(cookieParser());
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/resumeai')
   .then(async () => {

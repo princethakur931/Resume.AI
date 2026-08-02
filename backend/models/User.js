@@ -19,13 +19,13 @@ const userSchema = new mongoose.Schema({
   notificationTokens: { type: [String], default: [] },
   password: {
     type: String,
-    minlength: 6,
+    minlength: 8,
     validate: {
       validator: function(value) {
         if (this.authProvider !== 'local') return true;
-        return typeof value === 'string' && value.length >= 6;
+        return typeof value === 'string' && value.length >= 8;
       },
-      message: 'Password must be at least 6 characters for local accounts'
+      message: 'Password must be at least 8 characters for local accounts'
     }
   }
 }, { timestamps: true });

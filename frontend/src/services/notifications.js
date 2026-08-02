@@ -183,11 +183,15 @@ export const registerNotificationToken = async (options = {}) => {
       return false
     }
 
-    console.log('FCM Token:', token)
+    if (import.meta.env.DEV) {
+      console.log('FCM Token (dev only):', token.substring(0, 20) + '...')  // Only partial token in dev
+    }
 
     // Send token to backend
     const response = await api.post('/auth/notification-token', { token })
-    console.log('Token registered with backend:', response.data)
+    if (import.meta.env.DEV) {
+      console.log('Token registered with backend:', response.data)
+    }
 
     notificationTokenRetryCount = 0
 
