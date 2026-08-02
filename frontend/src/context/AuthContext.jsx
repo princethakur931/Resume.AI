@@ -15,7 +15,8 @@ export function AuthProvider({ children }) {
 
       try {
         // Validate session with backend — cookie is sent automatically
-        const { data } = await api.get('/auth/me')
+        // Use short timeout so app doesn't hang if backend is slow/unreachable
+        const { data } = await api.get('/auth/me', { timeout: 10000 })
         if (data?.user) {
           localStorage.setItem('user', JSON.stringify(data.user))
           setUser(data.user)
