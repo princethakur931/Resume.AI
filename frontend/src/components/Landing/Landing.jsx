@@ -54,7 +54,7 @@ const features = [
 const steps = [
   { num: '01', title: 'Upload Your Resume', desc: 'Drag & drop your existing resume in any format', color: 'text-brand-400' },
   { num: '02', title: 'Add Job Description', desc: 'Paste the target job posting you want to apply for', color: 'text-violet-400' },
-  { num: '03', title: 'AI Optimization', desc: 'Claude AI extracts keywords and enhances your resume', color: 'text-emerald-400' },
+  { num: '03', title: 'AI Optimization', desc: 'Resume.AI extracts keywords and enhances your resume', color: 'text-emerald-400' },
   { num: '04', title: 'Download & Apply', desc: 'Get your ATS-optimized PDF resume instantly', color: 'text-pink-400' },
 ]
 

@@ -142,6 +142,55 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+    const now = new Date();
+    const jobs = await Job.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.params.id),
+          isActive: true,
+          $or: [
+            { endDate: { $exists: false } },
+            { endDate: null },
+            { endDate: { $gte: now } }
+          ]
+        }
+      },
+      {
+        $project: {
+          ...publicProjection,
+          hasApplied: {
+            $gt: [
+              {
+                $size: {
+                  $filter: {
+                    input: { $ifNull: ['$applicants', []] },
+                    as: 'applicant',
+                    cond: { $eq: ['$$applicant.userId', req.user._id] }
+                  }
+                }
+              },
+              0
+            ]
+          }
+        }
+      }
+    ]);
+    
+    if (!jobs.length) {
+       return res.status(404).json({ message: 'Job not found or no longer active' });
+    }
+    res.json({ job: jobs[0] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.post('/:id/apply', authMiddleware, async (req, res) => {
   try {
     await cleanupExpiredJobs();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -25,6 +25,8 @@ export default function Login() {
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/'
 
   useEffect(() => {
     warmBackend()
@@ -62,7 +64,7 @@ export default function Login() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    navigate('/')
+    navigate(from, { replace: true })
   }
 
   const handleGoogleLogin = async () => {
@@ -190,7 +192,7 @@ export default function Login() {
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Don't have an account?{' '}
-            <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
+            <Link to="/register" state={{ from }} className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
               Create one free
             </Link>
           </p>

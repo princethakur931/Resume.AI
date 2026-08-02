@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Briefcase,
@@ -16,6 +16,7 @@ import {
   XCircle
 } from 'lucide-react'
 import api from '../../services/api'
+import ProfileDropdown from '../Shared/ProfileDropdown'
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg'
 
@@ -41,6 +42,7 @@ function getDaysLeft(endDate) {
 }
 
 export default function JobsBoard() {
+  const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -123,20 +125,15 @@ export default function JobsBoard() {
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:22px_22px]" />
       </div>
 
-      <header className="relative z-20 border-b border-white/[0.08] glass">
-        <div className="max-w-6xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden ring-1 ring-white/10 flex-shrink-0">
-              <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-[0.2em]">Hiring Board</p>
-              <h1 className="text-sm sm:text-lg font-bold text-white leading-tight whitespace-nowrap">Live Job Openings</h1>
-            </div>
+      <header className="relative z-50 flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06] glass shrink-0 sticky top-0">
+        <Link to="/" className="flex items-center gap-2.5" aria-label="Go to home page">
+          <div className="w-7 h-7 rounded-lg overflow-hidden shadow-glow-sm ring-1 ring-white/10">
+            <img src="/Resume.AI.jpeg" alt="Resume.AI logo" className="w-full h-full object-cover" />
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link to="/dashboard" className="btn-primary !rounded-lg !text-[11px] sm:!text-xs !px-2.5 sm:!px-4 !py-1.5 sm:!py-2 whitespace-nowrap transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/50">Back to Dashboard</Link>
-          </div>
+          <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <ProfileDropdown />
         </div>
       </header>
 
@@ -210,6 +207,7 @@ export default function JobsBoard() {
                   transition={{ delay: index * 0.05 }}
                   onMouseEnter={() => setHoveredJobId(job._id)}
                   onMouseLeave={() => setHoveredJobId(null)}
+                  onClick={() => navigate(`/jobs/${job._id}`)}
                   className={`glass-card p-6 border relative overflow-hidden transition-all duration-300 cursor-pointer ${
                     hoveredJobId === job._id
                       ? 'border-cyan-400/60 shadow-lg shadow-cyan-500/50'
@@ -272,14 +270,18 @@ export default function JobsBoard() {
                           <p className="text-xs text-slate-300 inline-flex items-center gap-1"><UserRound className="w-3.5 h-3.5" /> {job.applicantsCount || 0} applicants</p>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <button
-                            onClick={() => setSelectedJob(job)}
+                          <Link
+                            to={`/jobs/${job._id}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-400/30 bg-slate-500/10 text-slate-300 transition-all hover:border-slate-400/50 hover:bg-slate-500/20"
                           >
                             <Eye className="w-3.5 h-3.5" /> View
-                          </button>
+                          </Link>
                           <button
-                          onClick={() => applyJob(job)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            applyJob(job);
+                          }}
                           disabled={isApplying}
                           className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                             job.hasApplied

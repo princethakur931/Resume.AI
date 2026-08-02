@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -38,6 +38,9 @@ export default function Register() {
   const [error, setError] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const { login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/'
 
   useEffect(() => {
     warmBackend()
@@ -55,7 +58,7 @@ export default function Register() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    window.location.href = '/'
+    navigate(from, { replace: true })
   }
 
   const handleSubmit = async e => {
@@ -240,7 +243,7 @@ export default function Register() {
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Already have an account?{' '}
-            <Link to="/login" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
+            <Link to="/login" state={{ from }} className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
               Sign in
             </Link>
           </p>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Landing from './components/Landing/Landing'
 import Login from './components/Auth/Login'
@@ -7,6 +7,7 @@ import Register from './components/Auth/Register'
 import AuthAction from './components/Auth/AuthAction'
 import Dashboard from './components/Dashboard/Dashboard'
 import JobsBoard from './components/Jobs/JobsBoard'
+import JobDetail from './components/Jobs/JobDetail'
 import AdminJobsSecret from './components/Jobs/AdminJobsSecret'
 import ProfilePage from './components/Profile/ProfilePage'
 
@@ -33,8 +34,9 @@ function StartupLoader() {
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
-  return user ? children : <Navigate to="/login" replace />
+  return user ? children : <Navigate to="/login" state={{ from: location.pathname }} replace />
 }
 
 function PublicRoute({ children }) {
@@ -73,6 +75,7 @@ export default function App() {
           <Route path="/auth/action" element={<AuthAction />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/jobs" element={<PrivateRoute><JobsBoard /></PrivateRoute>} />
+          <Route path="/jobs/:id" element={<PrivateRoute><JobDetail /></PrivateRoute>} />
           <Route path={adminSecretPath} element={<AdminSecretRoute><AdminJobsSecret /></AdminSecretRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
