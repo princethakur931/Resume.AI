@@ -63,8 +63,27 @@ function buildJobPayload(body) {
 
   const companyPhotoInput = normalizeText(body.companyPhoto);
 
+  // Determine company photo: accept data URLs (file uploads), valid http/https URLs, or fall back to default
+  let companyPhoto = DEFAULT_COMPANY_PHOTO;
+  if (companyPhotoInput) {
+    if (companyPhotoInput.startsWith('data:image/')) {
+      // Base64 data URL from file upload or paste — accept as-is
+      companyPhoto = companyPhotoInput;
+    } else {
+      // Try to parse as a web URL (https or http)
+      try {
+        const parsed = new URL(companyPhotoInput);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+          companyPhoto = parsed.toString();
+        }
+      } catch {
+        // Invalid URL — keep default
+      }
+    }
+  }
+
   return {
-    companyPhoto: sanitizeHttpsUrl(companyPhotoInput) || DEFAULT_COMPANY_PHOTO,
+    companyPhoto,
     companyName,
     jobRole: normalizeText(body.jobRole),
     applyUrl: parsedApplyUrl,
