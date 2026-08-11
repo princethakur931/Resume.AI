@@ -117,7 +117,7 @@ export default function JobDetail() {
   const daysLeft = job ? getDaysLeft(job.endDate) : null
 
   return (
-    <div className="min-h-screen bg-surface-0 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-0 relative overflow-hidden pb-[70px] md:pb-0">
       {/* Background blobs */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-15%] left-[-5%] w-[600px] h-[600px] bg-brand-600/10 rounded-full blur-[130px]" />

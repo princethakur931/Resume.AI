@@ -117,7 +117,7 @@ export default function JobsBoard() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-0 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-0 relative overflow-hidden pb-[70px] md:pb-0">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-[-5%] w-[560px] h-[560px] bg-cyan-600/10 rounded-full blur-[120px]" />
         <div className="absolute top-[5%] right-[-10%] w-[560px] h-[560px] bg-brand-600/12 rounded-full blur-[130px]" />

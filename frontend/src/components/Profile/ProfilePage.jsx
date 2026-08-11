@@ -156,7 +156,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-0 relative overflow-x-hidden">
+    <div className="min-h-screen bg-surface-0 relative overflow-x-hidden pb-[70px] md:pb-0">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-[430px] h-[320px] bg-brand-600/6 rounded-full blur-[100px]" />
         <div className="absolute bottom-0 right-0 w-[340px] h-[300px] bg-violet-600/5 rounded-full blur-[90px]" />
