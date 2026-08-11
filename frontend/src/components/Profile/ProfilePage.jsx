@@ -172,7 +172,7 @@ export default function ProfilePage() {
           </Link>
           <button
             onClick={() => navigate('/dashboard')}
-            className="btn-secondary px-4 py-2"
+            className="hidden md:flex btn-secondary px-4 py-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Back

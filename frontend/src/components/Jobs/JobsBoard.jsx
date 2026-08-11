@@ -132,7 +132,7 @@ export default function JobsBoard() {
           </div>
           <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <ProfileDropdown />
         </div>
       </header>
