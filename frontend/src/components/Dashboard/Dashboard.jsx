@@ -92,7 +92,7 @@ export default function Dashboard() {
   const activeStep = STEPS.findIndex(s => s.id === step)
 
   return (
-    <div className="min-h-screen lg:h-screen bg-surface-0 flex flex-col overflow-y-auto lg:overflow-hidden">
+    <div className="min-h-screen lg:h-screen bg-surface-0 flex flex-col overflow-y-auto lg:overflow-hidden pb-[70px] md:pb-0">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-[400px] h-[300px] bg-brand-600/6 rounded-full blur-[100px]" />

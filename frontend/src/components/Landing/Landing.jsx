@@ -132,7 +132,7 @@ export default function Landing() {
               </>
             ) : (
               <>
-                <Link to="/register" className="btn-primary w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base shadow-glow-md">
+                <Link to="/dashboard" className="btn-primary w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base shadow-glow-md">
                   Optimize My Resume Free
                   <ArrowRight className="w-5 h-5" />
                 </Link>
@@ -324,7 +324,7 @@ export default function Landing() {
                 Join thousands of job seekers who've boosted their ATS scores and landed more interviews with Resume.AI.
               </motion.p>
               <motion.div variants={fadeUp}>
-                <Link to="/register" className="btn-primary w-full sm:w-auto max-w-[280px] sm:max-w-none justify-center px-5 sm:px-10 py-3 sm:py-4 text-sm sm:text-base leading-tight shadow-glow-lg">
+                <Link to="/dashboard" className="btn-primary w-full sm:w-auto max-w-[280px] sm:max-w-none justify-center px-5 sm:px-10 py-3 sm:py-4 text-sm sm:text-base leading-tight shadow-glow-lg">
                   <span className="sm:hidden">Optimize My Resume</span>
                   <span className="hidden sm:inline">Optimize My Resume — It's Free</span>
                   <ArrowRight className="w-5 h-5" />

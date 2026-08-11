@@ -50,11 +50,12 @@ export default function BottomNav() {
                   />
                 </div>
               ) : (
-                <Icon 
-                  className={`w-[26px] h-[26px] transition-colors duration-200 ${isCurrentlyActive ? 'text-white' : 'text-white/60 hover:text-white/90'}`} 
-                  strokeWidth={isCurrentlyActive ? 2.5 : 2}
-                  fill={isCurrentlyActive ? 'currentColor' : 'none'}
-                />
+                <div className={`flex items-center justify-center w-[26px] h-[26px] rounded-full ${isCurrentlyActive ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0a0a0f]' : ''}`}>
+                  <Icon 
+                    className={`w-[22px] h-[22px] transition-colors duration-200 ${isCurrentlyActive ? 'text-white' : 'text-white/60 hover:text-white/90'}`} 
+                    strokeWidth={isCurrentlyActive ? 2.5 : 2}
+                  />
+                </div>
               )}
             </Link>
           )
