@@ -40,7 +40,7 @@ export default function Register() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from || '/'
+  const from = location.state?.from || localStorage.getItem('redirectAfterAuth') || '/'
 
   useEffect(() => {
     warmBackend()
@@ -58,6 +58,7 @@ export default function Register() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
+    localStorage.removeItem('redirectAfterAuth')
     navigate(from, { replace: true })
   }
 

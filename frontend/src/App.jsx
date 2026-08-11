@@ -36,7 +36,14 @@ function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   const location = useLocation()
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
-  return user ? children : <Navigate to="/login" state={{ from: location.pathname }} replace />
+  
+  if (!user) {
+    const fullPath = location.pathname + location.search
+    localStorage.setItem('redirectAfterAuth', fullPath)
+    return <Navigate to="/login" state={{ from: fullPath }} replace />
+  }
+  
+  return children
 }
 
 function PublicRoute({ children }) {
