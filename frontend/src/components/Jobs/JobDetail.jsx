@@ -141,7 +141,9 @@ export default function JobDetail() {
             <ArrowLeft className="w-3.5 h-3.5" />
             All Jobs
           </Link>
-          <ProfileDropdown />
+          <div className="hidden md:block">
+            <ProfileDropdown />
+          </div>
         </div>
       </header>
 
@@ -228,9 +230,9 @@ export default function JobDetail() {
               {/* Decorative glow */}
               <div className="absolute -top-24 -right-24 w-72 h-72 bg-gradient-to-br from-brand-500/20 to-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="relative flex flex-col sm:flex-row sm:items-start gap-5">
+              <div className="relative flex items-start gap-3 sm:gap-5">
                 {/* Company Logo */}
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-2 ring-1 ring-white/10 grid place-items-center flex-shrink-0 shadow-xl">
+                <div className="w-14 h-14 sm:w-24 sm:h-24 rounded-2xl bg-white p-1 sm:p-2 ring-1 ring-white/10 grid place-items-center flex-shrink-0 shadow-xl">
                   <img
                     src={job.companyPhoto || DEFAULT_COMPANY_PHOTO}
                     alt={job.companyName || 'Company'}
@@ -241,140 +243,94 @@ export default function JobDetail() {
 
                 {/* Title + Meta */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight break-words">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-[16px] sm:text-3xl font-black text-white leading-snug sm:leading-tight break-words">
                         {job.jobRole || 'Job Role'}
                       </h2>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <span className="text-base text-slate-300 font-medium">{job.companyName || 'Company'}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-2 flex-wrap min-w-0">
+                        <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0 hidden sm:block" />
+                        <span className="text-[13px] sm:text-base text-slate-400 sm:text-slate-300 font-medium truncate">{job.companyName || 'Company'}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {/* Days left badge */}
-                      {daysLeft === null ? (
-                        <span className="px-3 py-1.5 rounded-full text-xs border border-slate-400/30 bg-slate-500/10 text-slate-300 inline-flex items-center gap-1.5">
-                          <Timer className="w-3.5 h-3.5" /> No deadline
-                        </span>
-                      ) : daysLeft === 0 ? (
-                        <span className="px-3 py-1.5 rounded-full text-xs border border-red-400/40 bg-red-500/10 text-red-300 inline-flex items-center gap-1.5">
-                          <Timer className="w-3.5 h-3.5" /> Closing today
-                        </span>
-                      ) : (
-                        <span className={`px-3 py-1.5 rounded-full text-xs border inline-flex items-center gap-1.5 ${daysLeft <= 3 ? 'border-red-400/40 bg-red-500/10 text-red-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'}`}>
-                          <Timer className="w-3.5 h-3.5" /> {daysLeft} days left
-                        </span>
-                      )}
-                    </div>
+
                   </div>
 
-                  {/* Stats row */}
-                  <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/[0.06]">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <UserRound className="w-3.5 h-3.5" />
-                      <span>{job.applicantsCount || 0} applicants</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <CalendarClock className="w-3.5 h-3.5" />
-                      <span>Deadline: {formatEndDate(job.endDate)}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Posted recently</span>
-                    </div>
-                  </div>
+                </div>
+              </div>
+
+              {/* Stats row */}
+              <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/[0.06]">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                  <UserRound className="w-3.5 h-3.5" />
+                  <span>{job.applicantsCount || 0} applicants</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                  <CalendarClock className="w-3.5 h-3.5" />
+                  <span>Deadline: {formatEndDate(job.endDate)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>{job.batchOrEducation || 'Not specified'}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>{job.experience || 'Not specified'}</span>
                 </div>
               </div>
 
               {/* Action buttons */}
-              <div className="relative flex flex-col sm:flex-row gap-3 mt-6 pt-5 border-t border-white/[0.06]">
+              <div className="relative flex flex-row items-stretch sm:items-center gap-1.5 sm:gap-2 mt-5 sm:mt-6 pt-5 border-t border-white/[0.06] w-full">
                 {/* Apply */}
                 <button
                   onClick={applyJob}
                   disabled={applying}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
+                  className={`flex-[1.2] min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-6 sm:py-3 rounded-xl text-[11px] sm:text-sm font-bold transition-all whitespace-nowrap ${
                     job.hasApplied
                       ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
                       : 'btn-primary'
                   }`}
                 >
                   {applying ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Applying...</>
+                    <><Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin shrink-0" /> Appying...</>
                   ) : job.hasApplied ? (
-                    <><CircleCheckBig className="w-4 h-4" /> Already Applied</>
+                    <><CircleCheckBig className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Applied</>
                   ) : (
-                    <><UserCheck className="w-4 h-4" /> Apply Now</>
+                    <><UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Apply</>
                   )}
                 </button>
+                {/* Share */}
                 <button
                   id="share-btn"
                   onClick={handleShare}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:border-white/20 transition-all"
+                  className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1 py-2 sm:px-5 sm:py-3 rounded-xl text-[11px] sm:text-sm font-semibold border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:border-white/20 transition-all whitespace-nowrap"
                 >
                   {copied ? (
-                    <><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Copied Link</>
+                    <><CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Copied</>
                   ) : (
-                    <><Share2 className="w-4 h-4" /> Share Job</>
+                    <><Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Share</>
                   )}
                 </button>
+                {/* Days left badge */}
+                <div className="flex-[0.9] min-w-0 flex items-stretch sm:items-center justify-center">
+                  {daysLeft === null ? (
+                    <span className="w-full justify-center px-1 py-2 sm:px-3 sm:py-3 rounded-xl text-[11px] sm:text-sm font-semibold border border-slate-400/30 bg-slate-500/10 text-slate-300 inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+                      <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> None
+                    </span>
+                  ) : daysLeft === 0 ? (
+                    <span className="w-full justify-center px-1 py-2 sm:px-3 sm:py-3 rounded-xl text-[11px] sm:text-sm font-semibold border border-red-400/40 bg-red-500/10 text-red-300 inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+                      <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Today
+                    </span>
+                  ) : (
+                    <span className={`w-full justify-center px-1 py-2 sm:px-3 sm:py-3 rounded-xl text-[11px] sm:text-sm font-semibold border inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${daysLeft <= 3 ? 'border-red-400/40 bg-red-500/10 text-red-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'}`}>
+                      <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> {daysLeft} days
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Details Grid */}
-            <div className="grid sm:grid-cols-2 gap-4">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="glass-card p-5 border border-white/[0.08] hover:border-brand-400/30 hover:shadow-[0_0_28px_rgba(139,92,246,0.18)] transition-all duration-300"
-              >
-                <div className="flex items-center gap-2.5 mb-1">
-                  <GraduationCap className="w-4 h-4 text-brand-400" />
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Batch / Education</p>
-                </div>
-                <p className="text-white font-semibold text-base mt-2">{job.batchOrEducation || 'Not specified'}</p>
-              </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="glass-card p-5 border border-white/[0.08] hover:border-cyan-400/30 hover:shadow-[0_0_28px_rgba(34,211,238,0.15)] transition-all duration-300"
-              >
-                <div className="flex items-center gap-2.5 mb-1">
-                  <Briefcase className="w-4 h-4 text-cyan-400" />
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Experience Required</p>
-                </div>
-                <p className="text-white font-semibold text-base mt-2">{job.experience || 'Not specified'}</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="glass-card p-5 border border-white/[0.08] hover:border-amber-400/30 hover:shadow-[0_0_28px_rgba(251,191,36,0.12)] transition-all duration-300"
-              >
-                <div className="flex items-center gap-2.5 mb-1">
-                  <CalendarClock className="w-4 h-4 text-amber-400" />
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Application Deadline</p>
-                </div>
-                <p className="text-white font-semibold text-base mt-2">{formatEndDate(job.endDate)}</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-                className="glass-card p-5 border border-white/[0.08] hover:border-emerald-400/30 hover:shadow-[0_0_28px_rgba(52,211,153,0.12)] transition-all duration-300"
-              >
-                <div className="flex items-center gap-2.5 mb-1">
-                  <UserRound className="w-4 h-4 text-emerald-400" />
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Total Applicants</p>
-                </div>
-                <p className="text-white font-semibold text-base mt-2">{job.applicantsCount || 0} applied</p>
-              </motion.div>
-            </div>
 
             {/* Job Description */}
             <motion.div

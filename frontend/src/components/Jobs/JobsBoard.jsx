@@ -8,6 +8,8 @@ import {
   CircleCheckBig,
   Eye,
   GraduationCap,
+  MapPin,
+  Search,
   Sparkles,
   Timer,
   UserCheck,
@@ -50,8 +52,27 @@ export default function JobsBoard() {
   const [applyingFor, setApplyingFor] = useState('')
   const [hoveredJobId, setHoveredJobId] = useState(null)
   const [selectedJob, setSelectedJob] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [locationQuery, setLocationQuery] = useState('')
+  const [activeSearch, setActiveSearch] = useState({ query: '', location: '' })
 
-  const totalJobs = useMemo(() => jobs.length, [jobs])
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const q = activeSearch.query.toLowerCase()
+      const l = activeSearch.location.toLowerCase()
+      const matchesQuery = !q || 
+        (job.jobRole || '').toLowerCase().includes(q) || 
+        (job.companyName || '').toLowerCase().includes(q) ||
+        (job.jobDescription || '').toLowerCase().includes(q)
+      
+      const matchesLocation = !l ||
+        (job.location || 'Remote').toLowerCase().includes(l)
+        
+      return matchesQuery && matchesLocation
+    })
+  }, [jobs, activeSearch])
+
+  const totalJobs = useMemo(() => filteredJobs.length, [filteredJobs])
   const appliedJobs = useMemo(() => jobs.filter(job => job.hasApplied).length, [jobs])
 
   useEffect(() => {
@@ -141,7 +162,7 @@ export default function JobsBoard() {
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 mb-6 transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_40px_rgba(139,92,246,0.24)]"
+          className="hidden md:block glass-card p-6 mb-6 transition-all duration-300 hover:border-brand-400/30 hover:shadow-[0_0_40px_rgba(139,92,246,0.24)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -175,6 +196,52 @@ export default function JobsBoard() {
           </div>
         )}
 
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="glass-card p-1 md:p-2 flex flex-col md:flex-row md:items-center">
+            <div className="flex-1 flex flex-col md:flex-row w-full relative">
+              <div className="flex-1 flex items-center gap-3 px-4 py-3.5 md:py-3 border-b md:border-b-0 border-white/[0.08]">
+                <Search className="w-5 h-5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder='Job title, keywords, or company'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && setActiveSearch({ query: searchQuery, location: locationQuery })}
+                  className="w-full bg-transparent border-none outline-none text-white placeholder-slate-500 text-[15px]"
+                />
+              </div>
+              <div className="hidden md:block w-px h-8 bg-white/[0.08] self-center" />
+              <div className="flex-1 flex items-center gap-3 px-4 py-3.5 md:py-3">
+                <MapPin className="w-5 h-5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder='City, state, zip code, or "remote"'
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && setActiveSearch({ query: searchQuery, location: locationQuery })}
+                  className="w-full bg-transparent border-none outline-none text-white placeholder-slate-500 text-[15px]"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveSearch({ query: searchQuery, location: locationQuery })}
+              className="hidden md:flex ml-2 shrink-0 btn-primary"
+            >
+              Find jobs
+            </button>
+          </div>
+          <button
+            onClick={() => setActiveSearch({ query: searchQuery, location: locationQuery })}
+            className="md:hidden w-full mt-3 btn-primary"
+          >
+            Find jobs
+          </button>
+        </motion.div>
+
         {loading ? (
           <div className="grid md:grid-cols-2 gap-5">
             {Array.from({ length: 4 }).map((_, idx) => (
@@ -186,15 +253,15 @@ export default function JobsBoard() {
               </div>
             ))}
           </div>
-        ) : jobs.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <div className="glass-card p-10 text-center">
             <Briefcase className="w-9 h-9 text-slate-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold text-white">No jobs available right now</h3>
-            <p className="text-sm text-slate-500 mt-2">Please check back soon. New roles are posted frequently.</p>
+            <h3 className="text-xl font-bold text-white">No jobs match your search</h3>
+            <p className="text-sm text-slate-500 mt-2">Try adjusting your filters.</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-5">
-            {jobs.map((job, index) => {
+            {filteredJobs.map((job, index) => {
               const daysLeft = getDaysLeft(job.endDate)
               const isApplying = applyingFor === job._id
               const deadlineText = formatEndDate(job.endDate)
@@ -208,18 +275,19 @@ export default function JobsBoard() {
                   onMouseEnter={() => setHoveredJobId(job._id)}
                   onMouseLeave={() => setHoveredJobId(null)}
                   onClick={() => navigate(`/jobs/${job._id}`)}
-                  className={`glass-card p-6 border relative overflow-hidden transition-all duration-300 cursor-pointer ${
+                  className={`glass-card p-0 md:p-6 border relative overflow-hidden transition-all duration-300 cursor-pointer ${
                     hoveredJobId === job._id
                       ? 'border-cyan-400/60 shadow-lg shadow-cyan-500/50'
                       : 'border-white/[0.1]'
                   }`}
                 >
-                  <div className={`absolute -top-20 -right-16 w-52 h-52 rounded-full blur-2xl transition-all duration-300 ${
+                  <div className={`hidden md:block absolute -top-20 -right-16 w-52 h-52 rounded-full blur-2xl transition-all duration-300 ${
                     hoveredJobId === job._id
                       ? 'bg-gradient-to-br from-cyan-500/40 to-brand-500/20'
                       : 'bg-gradient-to-br from-cyan-500/20 to-brand-500/0'
                   }`} />
-                  <div className="relative flex flex-col h-full">
+                  {/* DESKTOP VIEW */}
+                  <div className="hidden md:flex relative flex-col h-full w-full">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 flex-1">
                         <div className="w-14 h-14 rounded-xl bg-white p-1.5 ring-1 ring-white/10 grid place-items-center flex-shrink-0">
@@ -299,6 +367,68 @@ export default function JobsBoard() {
                       </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* MOBILE VIEW */}
+                <div className="md:hidden flex flex-col h-full p-5 w-full relative z-10">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-white overflow-hidden flex-shrink-0 flex items-center justify-center p-0.5">
+                      <img
+                        src={job.companyPhoto || DEFAULT_COMPANY_PHOTO}
+                        alt={job.companyName || 'Company'}
+                        className="w-full h-full object-contain"
+                        onError={e => { e.currentTarget.src = DEFAULT_COMPANY_PHOTO }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <h3 className="text-[15px] font-bold text-white leading-tight truncate">{job.jobRole || 'Not provided'}</h3>
+                      <p className="text-[12px] text-slate-400 mt-0.5 truncate">{job.companyName || 'Not provided'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-300">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate max-w-[160px]">{job.experience || 'No prior experience required'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span className="truncate max-w-[100px]">{job.location || 'Remote'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-[12px] text-slate-300">
+                      <Timer className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="truncate">{job.batchOrEducation || 'Full Time'}</span>
+                    </div>
+                  </div>
+
+
+
+                  <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
+                      <span>{deadlineText}</span>
+                      {daysLeft !== null && (
+                        <span className="flex items-center gap-1 text-slate-400 font-normal">
+                          <Timer className="w-3 h-3" /> {daysLeft} days left
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        applyJob(job);
+                      }}
+                      disabled={isApplying}
+                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[12px] font-bold transition-all ${
+                        job.hasApplied
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-white text-slate-900 hover:bg-slate-200 active:scale-95'
+                      }`}
+                    >
+                      {isApplying ? 'Applying...' : job.hasApplied ? 'Applied' : 'Apply'}
+                    </button>
                   </div>
                 </div>
                 </motion.article>
