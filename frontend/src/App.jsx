@@ -10,6 +10,7 @@ import JobsBoard from './components/Jobs/JobsBoard'
 import JobDetail from './components/Jobs/JobDetail'
 import AdminJobsSecret from './components/Jobs/AdminJobsSecret'
 import ProfilePage from './components/Profile/ProfilePage'
+import BottomNav from './components/Shared/BottomNav'
 
 const adminSecretPath = import.meta.env.VITE_ADMIN_SECRET_PATH || '/admin'
 
@@ -43,7 +44,12 @@ function PrivateRoute({ children }) {
     return <Navigate to="/login" state={{ from: fullPath }} replace />
   }
   
-  return children
+  return (
+    <>
+      {children}
+      <BottomNav />
+    </>
+  )
 }
 
 function PublicRoute({ children }) {

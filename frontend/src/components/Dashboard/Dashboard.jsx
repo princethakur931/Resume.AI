@@ -127,7 +127,7 @@ export default function Dashboard() {
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <Link to="/jobs" className="btn-secondary text-xs px-3 py-2">Jobs</Link>
           <ProfileDropdown />
         </div>
