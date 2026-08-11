@@ -58,8 +58,6 @@ export default function Register() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    localStorage.removeItem('redirectAfterAuth')
-    navigate(from, { replace: true })
   }
 
   const handleSubmit = async e => {

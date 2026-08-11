@@ -48,8 +48,19 @@ function PrivateRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
+  
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
-  return !user ? children : <Navigate to="/" replace />
+  
+  if (user) {
+    const from = location.state?.from || localStorage.getItem('redirectAfterAuth') || '/'
+    if (localStorage.getItem('redirectAfterAuth')) {
+      localStorage.removeItem('redirectAfterAuth')
+    }
+    return <Navigate to={from} replace />
+  }
+  
+  return children
 }
 
 function AdminSecretRoute({ children }) {

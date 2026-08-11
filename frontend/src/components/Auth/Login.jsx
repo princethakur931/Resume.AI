@@ -64,8 +64,6 @@ export default function Login() {
       ...data.user,
       profilePhoto: data.user?.profilePhoto || photoFromProvider || ''
     })
-    localStorage.removeItem('redirectAfterAuth')
-    navigate(from, { replace: true })
   }
 
   const handleGoogleLogin = async () => {
