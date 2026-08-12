@@ -402,13 +402,13 @@ export default function JobsBoard() {
                       {job.experience && (
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[160px]">{job.experience}</span>
+                          <span className="line-clamp-1">{job.experience}</span>
                         </div>
                       )}
                       {job.location && (
                         <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
                           <MapPin className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[100px]">{job.location}</span>
+                          <span className="line-clamp-1">{job.location}</span>
                         </div>
                       )}
                     </div>

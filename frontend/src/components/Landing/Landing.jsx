@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Zap, Target, FileCheck, ChevronRight, Sparkles, Shield, BarChart3 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import BottomNav from '../Shared/BottomNav'
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } }
 const stagger = { visible: { transition: { staggerChildren: 0.12 } } }
@@ -345,6 +346,7 @@ export default function Landing() {
         </div>
         <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Resume.AI</p>
       </footer>
+      {user && <BottomNav />}
     </div>
   )
 }
