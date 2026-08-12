@@ -89,6 +89,7 @@ function buildJobPayload(body) {
     applyUrl: parsedApplyUrl,
     batchOrEducation: normalizeText(body.batchOrEducation),
     experience: normalizeText(body.experience),
+    location: normalizeText(body.location),
     jobDescription,
     endDate: parsedEndDate
   };
@@ -110,6 +111,7 @@ const publicProjection = {
   applyUrl: 1,
   batchOrEducation: 1,
   experience: 1,
+  location: 1,
   jobDescription: 1,
   endDate: 1,
   createdAt: 1,

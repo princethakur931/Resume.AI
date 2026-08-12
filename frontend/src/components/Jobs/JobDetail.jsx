@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Linkedin,
   Loader2,
+  MapPin,
   Share2,
   Timer,
   UserCheck,
@@ -265,18 +266,30 @@ export default function JobDetail() {
                   <UserRound className="w-3.5 h-3.5" />
                   <span>{job.applicantsCount || 0} applicants</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
-                  <CalendarClock className="w-3.5 h-3.5" />
-                  <span>Deadline: {formatEndDate(job.endDate)}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>{job.batchOrEducation || 'Not specified'}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span>{job.experience || 'Not specified'}</span>
-                </div>
+                {job.location && (
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>{job.location}</span>
+                  </div>
+                )}
+                {job.endDate && (
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                    <CalendarClock className="w-3.5 h-3.5" />
+                    <span>Deadline: {formatEndDate(job.endDate)}</span>
+                  </div>
+                )}
+                {job.batchOrEducation && (
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>{job.batchOrEducation}</span>
+                  </div>
+                )}
+                {job.experience && (
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>{job.experience}</span>
+                  </div>
+                )}
               </div>
 
               {/* Action buttons */}

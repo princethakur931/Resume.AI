@@ -15,6 +15,7 @@ const jobSchema = new mongoose.Schema({
   batchOrEducation: { type: String, trim: true },
   experience: { type: String, trim: true },
   jobDescription: { type: String, trim: true },
+  location: { type: String, trim: true },
   endDate: { type: Date },
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   applicants: [applicantSchema],
