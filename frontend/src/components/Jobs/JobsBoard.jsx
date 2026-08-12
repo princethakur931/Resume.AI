@@ -317,14 +317,24 @@ export default function JobsBoard() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs mt-4">
-                      <div className="glass rounded-lg p-2 border border-white/[0.08] text-slate-300 flex items-center gap-1.5">
-                        <GraduationCap className="w-3.5 h-3.5 text-brand-300 flex-shrink-0" />
-                        Batch/Education: {job.batchOrEducation || 'Not set'}
-                      </div>
-                      <div className="glass rounded-lg p-2 border border-white/[0.08] text-slate-300 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
-                        Experience: {job.experience || 'Not set'}
-                      </div>
+                      {job.location && (
+                        <div className="glass rounded-lg p-2 border border-white/[0.08] text-slate-300 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-brand-300 flex-shrink-0" />
+                          {job.location}
+                        </div>
+                      )}
+                      {job.batchOrEducation && (
+                        <div className="glass rounded-lg p-2 border border-white/[0.08] text-slate-300 flex items-center gap-1.5">
+                          <GraduationCap className="w-3.5 h-3.5 text-brand-300 flex-shrink-0" />
+                          {job.batchOrEducation}
+                        </div>
+                      )}
+                      {job.experience && (
+                        <div className="glass rounded-lg p-2 border border-white/[0.08] text-slate-300 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
+                          {job.experience}
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 flex-1 min-h-0">
@@ -389,26 +399,34 @@ export default function JobsBoard() {
 
                   <div className="space-y-2 mb-3">
                     <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-300">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[160px]">{job.experience || 'No prior experience required'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="truncate max-w-[100px]">{job.location || 'Remote'}</span>
-                      </div>
+                      {job.experience && (
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[160px]">{job.experience}</span>
+                        </div>
+                      )}
+                      {job.location && (
+                        <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[100px]">{job.location}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2.5 text-[12px] text-slate-300">
-                      <Timer className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="truncate">{job.batchOrEducation || 'Full Time'}</span>
-                    </div>
+                    {job.batchOrEducation && (
+                      <div className="flex items-center gap-2.5 text-[12px] text-slate-300">
+                        <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="truncate">{job.batchOrEducation}</span>
+                      </div>
+                    )}
                   </div>
 
 
 
                   <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                      <span>{deadlineText}</span>
+                      <span className="flex items-center gap-1">
+                        <CalendarClock className="w-3 h-3" /> {deadlineText}
+                      </span>
                       {daysLeft !== null && (
                         <span className="flex items-center gap-1 text-slate-400 font-normal">
                           <Timer className="w-3 h-3" /> {daysLeft} days left
@@ -473,18 +491,31 @@ export default function JobsBoard() {
 
             <div className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Batch / Education: <span className="text-white font-semibold">{selectedJob.batchOrEducation || 'Not set'}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Experience: <span className="text-white font-semibold">{selectedJob.experience || 'Not set'}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Deadline: <span className="text-white font-semibold">{formatEndDate(selectedJob.endDate)}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Days Left: <span className="text-white font-semibold">{getDaysLeft(selectedJob.endDate) === null ? 'N/A' : `${getDaysLeft(selectedJob.endDate)} days`}</span></p>
-                </div>
+                {selectedJob.location && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Location: <span className="text-white font-semibold">{selectedJob.location}</span></p>
+                  </div>
+                )}
+                {selectedJob.batchOrEducation && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Batch / Education: <span className="text-white font-semibold">{selectedJob.batchOrEducation}</span></p>
+                  </div>
+                )}
+                {selectedJob.experience && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Experience: <span className="text-white font-semibold">{selectedJob.experience}</span></p>
+                  </div>
+                )}
+                {selectedJob.endDate && (
+                  <>
+                    <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                      <p className="text-xs text-slate-500 uppercase">Deadline: <span className="text-white font-semibold">{formatEndDate(selectedJob.endDate)}</span></p>
+                    </div>
+                    <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                      <p className="text-xs text-slate-500 uppercase">Days Left: <span className="text-white font-semibold">{getDaysLeft(selectedJob.endDate) === null ? 'N/A' : `${getDaysLeft(selectedJob.endDate)} days`}</span></p>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_28px_rgba(139,92,246,0.22)]">

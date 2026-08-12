@@ -41,7 +41,7 @@ export default function BottomNav() {
               aria-label={item.id}
             >
               {item.isProfile && hasAvatar ? (
-                <div className={`w-[26px] h-[26px] rounded-full overflow-hidden ${isCurrentlyActive ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0a0a0f]' : 'ring-1 ring-white/20'}`}>
+                <div className={`w-[26px] h-[26px] rounded-full overflow-hidden ${isCurrentlyActive ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-[#0a0a0f]' : 'ring-1 ring-white/20'}`}>
                   <img 
                     src={normalizedPhoto} 
                     alt="Profile" 
@@ -50,9 +50,9 @@ export default function BottomNav() {
                   />
                 </div>
               ) : (
-                <div className={`flex items-center justify-center w-[26px] h-[26px] rounded-full ${isCurrentlyActive ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0a0a0f]' : ''}`}>
+                <div className={`flex items-center justify-center w-[32px] h-[32px] rounded-full transition-all duration-300 ${isCurrentlyActive ? 'bg-gradient-to-r from-brand-600 to-violet-600 shadow-[0_0_12px_rgba(99,102,241,0.5)]' : ''}`}>
                   <Icon 
-                    className={`w-[22px] h-[22px] transition-colors duration-200 ${isCurrentlyActive ? 'text-white' : 'text-white/60 hover:text-white/90'}`} 
+                    className={`w-[20px] h-[20px] transition-colors duration-200 ${isCurrentlyActive ? 'text-white' : 'text-white/60 hover:text-white/90'}`} 
                     strokeWidth={isCurrentlyActive ? 2.5 : 2}
                   />
                 </div>

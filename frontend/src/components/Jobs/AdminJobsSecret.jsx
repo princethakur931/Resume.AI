@@ -22,6 +22,7 @@ const emptyForm = {
   companyPhoto: '',
   companyName: '',
   jobRole: '',
+  location: '',
   applyUrl: '',
   batchOrEducation: '',
   experience: '',
@@ -249,6 +250,7 @@ export default function AdminJobsSecret() {
       companyPhoto: job.companyPhoto || '',
       companyName: job.companyName || '',
       jobRole: job.jobRole || '',
+      location: job.location || '',
       applyUrl: job.applyUrl || '',
       batchOrEducation: job.batchOrEducation || '',
       experience: job.experience || '',
@@ -381,6 +383,10 @@ export default function AdminJobsSecret() {
               <input className="input-field" placeholder="Enter job role" value={form.jobRole} onChange={e => setForm(f => ({ ...f, jobRole: e.target.value }))} />
             </div>
             <div>
+              <label className="text-xs text-slate-500 mb-1 block">Location</label>
+              <input className="input-field" placeholder="Enter location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
+            </div>
+            <div>
               <label className="text-xs text-slate-500 mb-1 block">Apply Redirect URL</label>
               <input className="input-field" placeholder="https://company.com/careers/apply" value={form.applyUrl} onChange={e => setForm(f => ({ ...f, applyUrl: e.target.value }))} />
             </div>
@@ -466,17 +472,18 @@ export default function AdminJobsSecret() {
                     </div>
                   </div>
 
-                  <div className="mt-3 grid sm:grid-cols-3 gap-2 text-xs text-slate-400">
-                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Batch/Education: {job.batchOrEducation || 'Not set'}</p>
-                    <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Experience: {job.experience || 'Not set'}</p>
-                    <p className="glass rounded px-2 py-1 border border-white/[0.07] inline-flex items-center gap-1 transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                    {job.location && <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Location: {job.location}</p>}
+                    {job.batchOrEducation && <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Batch/Education: {job.batchOrEducation}</p>}
+                    {job.experience && <p className="glass rounded px-2 py-1 border border-white/[0.07] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">Experience: {job.experience}</p>}
+                    {job.endDate && <p className="glass rounded px-2 py-1 border border-white/[0.07] inline-flex items-center gap-1 transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_22px_rgba(139,92,246,0.16)]">
                       <CalendarClock className="w-3.5 h-3.5" /> End Date: {formatDate(job.endDate)}
-                    </p>
+                    </p>}
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Job Description: {truncateText(job.jobDescription)}</p>
+                  {job.jobDescription && <p className="mt-2 text-xs text-slate-400 break-words [overflow-wrap:anywhere]">Job Description: {truncateText(job.jobDescription)}</p>}
 
-                  <p className="mt-2 text-[11px] text-slate-400 break-all">Apply Redirect URL: {job.applyUrl || 'Not set'}</p>
+                  {job.applyUrl && <p className="mt-2 text-[11px] text-slate-400 break-all">Apply Redirect URL: {job.applyUrl}</p>}
 
                   <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                     <div className="text-xs text-slate-300 inline-flex items-center gap-1">
@@ -545,18 +552,31 @@ export default function AdminJobsSecret() {
 
             <div className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Batch / Education: <span className="text-white font-semibold">{previewJob.batchOrEducation || 'Not set'}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Experience: <span className="text-white font-semibold">{previewJob.experience || 'Not set'}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Deadline: <span className="text-white font-semibold">{formatPreviewEndDate(previewJob.endDate)}</span></p>
-                </div>
-                <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
-                  <p className="text-xs text-slate-500 uppercase">Days Left: <span className="text-white font-semibold">{getDaysLeft(previewJob.endDate) === null ? 'N/A' : `${getDaysLeft(previewJob.endDate)} days`}</span></p>
-                </div>
+                {previewJob.location && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Location: <span className="text-white font-semibold">{previewJob.location}</span></p>
+                  </div>
+                )}
+                {previewJob.batchOrEducation && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Batch / Education: <span className="text-white font-semibold">{previewJob.batchOrEducation}</span></p>
+                  </div>
+                )}
+                {previewJob.experience && (
+                  <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                    <p className="text-xs text-slate-500 uppercase">Experience: <span className="text-white font-semibold">{previewJob.experience}</span></p>
+                  </div>
+                )}
+                {previewJob.endDate && (
+                  <>
+                    <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                      <p className="text-xs text-slate-500 uppercase">Deadline: <span className="text-white font-semibold">{formatPreviewEndDate(previewJob.endDate)}</span></p>
+                    </div>
+                    <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_24px_rgba(139,92,246,0.2)]">
+                      <p className="text-xs text-slate-500 uppercase">Days Left: <span className="text-white font-semibold">{getDaysLeft(previewJob.endDate) === null ? 'N/A' : `${getDaysLeft(previewJob.endDate)} days`}</span></p>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="glass rounded-lg p-4 border border-white/[0.08] transition-all duration-300 hover:border-brand-400/35 hover:shadow-[0_0_28px_rgba(139,92,246,0.22)]">
