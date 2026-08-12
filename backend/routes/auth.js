@@ -72,8 +72,17 @@ const serializeUser = (user) => ({
   phoneNumber: user.phoneNumber || '',
   authProvider: user.authProvider || 'local',
   profilePhoto: user.profilePhoto || '',
+  title: user.title || '',
   githubProfile: user.githubProfile || '',
-  linkedinProfile: user.linkedinProfile || ''
+  linkedinProfile: user.linkedinProfile || '',
+  about: user.about || '',
+  education: user.education || {
+    collegeName: '',
+    degree: '',
+    course: '',
+    startYear: '',
+    endYear: ''
+  }
 });
 
 const sanitizeRemoteImageUrl = (value) => {
@@ -265,7 +274,7 @@ router.post('/profile/photo', auth, (req, res) => {
 
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, profilePhoto, githubProfile, linkedinProfile } = req.body;
+    const { name, profilePhoto, githubProfile, linkedinProfile, about, title, education, phoneNumber } = req.body;
 
     if (typeof name !== 'string' || name.trim().length < 2) {
       return res.status(400).json({ message: 'Name must be at least 2 characters' });
@@ -273,8 +282,11 @@ router.put('/profile', auth, async (req, res) => {
 
     const hasProfilePhoto = typeof profilePhoto === 'string';
     const trimmedPhoto = hasProfilePhoto ? profilePhoto.trim() : '';
+    const trimmedTitle = typeof title === 'string' ? title.trim() : '';
     const trimmedGithub = typeof githubProfile === 'string' ? githubProfile.trim() : '';
     const trimmedLinkedin = typeof linkedinProfile === 'string' ? linkedinProfile.trim() : '';
+    const trimmedAbout = typeof about === 'string' ? about.trim() : '';
+    const trimmedPhone = typeof phoneNumber === 'string' ? phoneNumber.trim() : '';
 
     if (hasProfilePhoto) {
       const maxPhotoLength = trimmedPhoto.startsWith('data:image/') ? 8 * 1024 * 1024 : 2000;
@@ -293,8 +305,24 @@ router.put('/profile', auth, async (req, res) => {
 
     req.user.name = name.trim();
     if (hasProfilePhoto) req.user.profilePhoto = trimmedPhoto;
+    req.user.title = trimmedTitle;
     req.user.githubProfile = trimmedGithub;
     req.user.linkedinProfile = trimmedLinkedin;
+    req.user.about = trimmedAbout;
+    if (education && typeof education === 'object') {
+      req.user.education = {
+        collegeName: typeof education.collegeName === 'string' ? education.collegeName.trim() : '',
+        degree: typeof education.degree === 'string' ? education.degree.trim() : '',
+        course: typeof education.course === 'string' ? education.course.trim() : '',
+        startYear: typeof education.startYear === 'string' ? education.startYear.trim() : '',
+        endYear: typeof education.endYear === 'string' ? education.endYear.trim() : ''
+      };
+    }
+    if (trimmedPhone) {
+      req.user.phoneNumber = trimmedPhone;
+    } else {
+      req.user.phoneNumber = undefined;
+    }
     await req.user.save();
 
     res.json({ message: 'Profile updated', user: serializeUser(req.user) });

@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const multer = require('multer');
 const authMiddleware = require('../middleware/auth');
+const optionalAuthMiddleware = require('../middleware/optionalAuth');
 const Resume = require('../models/Resume');
 const aiService = require('../services/aiService');
 const latexService = require('../services/latexService');
@@ -10,9 +11,12 @@ const mammoth = require('mammoth');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Check pdflatex availability
-router.get('/status', authMiddleware, async (req, res) => {
+router.get('/status', optionalAuthMiddleware, async (req, res) => {
   const pdflatexAvailable = await latexService.checkPdflatex();
-  const resume = await Resume.findOne({ userId: req.user._id }).select('-pdfBase64 -latexCode -optimizedLatex');
+  let resume = null;
+  if (req.user) {
+    resume = await Resume.findOne({ userId: req.user._id }).select('-pdfBase64 -latexCode -optimizedLatex');
+  }
   res.json({ pdflatexAvailable, resume });
 });
 

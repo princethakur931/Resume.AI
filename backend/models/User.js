@@ -13,8 +13,17 @@ const userSchema = new mongoose.Schema({
   },
   firebaseUid: { type: String, unique: true, sparse: true, trim: true },
   profilePhoto: { type: String, default: '' },
+  title: { type: String, default: '', trim: true },
   githubProfile: { type: String, default: '' },
   linkedinProfile: { type: String, default: '' },
+  about: { type: String, default: '', trim: true },
+  education: {
+    collegeName: { type: String, default: '', trim: true },
+    degree: { type: String, default: '', trim: true },
+    course: { type: String, default: '', trim: true },
+    startYear: { type: String, default: '', trim: true },
+    endYear: { type: String, default: '', trim: true }
+  },
   notificationToken: { type: String, default: '' },
   notificationTokens: { type: [String], default: [] },
   password: {

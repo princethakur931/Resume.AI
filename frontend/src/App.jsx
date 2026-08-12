@@ -76,6 +76,15 @@ function AdminSecretRoute({ children }) {
   return user.role === 'admin' ? children : <Navigate to="/dashboard" replace />
 }
 
+function MainRoute({ children }) {
+  return (
+    <>
+      {children}
+      <BottomNav />
+    </>
+  )
+}
+
 export default function App() {
   const isAdminRoute = window.location.pathname === adminSecretPath
   const [showStartupLoader, setShowStartupLoader] = useState(!isAdminRoute)
@@ -97,9 +106,9 @@ export default function App() {
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/auth/action" element={<AuthAction />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/jobs" element={<PrivateRoute><JobsBoard /></PrivateRoute>} />
-          <Route path="/jobs/:id" element={<PrivateRoute><JobDetail /></PrivateRoute>} />
+          <Route path="/dashboard" element={<MainRoute><Dashboard /></MainRoute>} />
+          <Route path="/jobs" element={<MainRoute><JobsBoard /></MainRoute>} />
+          <Route path="/jobs/:id" element={<MainRoute><JobDetail /></MainRoute>} />
           <Route path={adminSecretPath} element={<AdminSecretRoute><AdminJobsSecret /></AdminSecretRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

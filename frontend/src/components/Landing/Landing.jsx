@@ -63,7 +63,7 @@ export default function Landing() {
   const { user, loading } = useAuth()
 
   return (
-    <div className="min-h-screen bg-surface-0 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-0 relative overflow-hidden pb-[70px] md:pb-0">
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-brand-600/10 rounded-full blur-[120px]" />
@@ -346,7 +346,7 @@ export default function Landing() {
         </div>
         <p className="text-xs text-slate-600">© 2026 Resume.AI • Powered by Resume.AI</p>
       </footer>
-      {user && <BottomNav />}
+      <BottomNav />
     </div>
   )
 }

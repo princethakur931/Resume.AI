@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import {
   Upload, FileText, CheckCircle2, AlertCircle, X,
   CloudUpload, File, Loader2
@@ -7,6 +9,10 @@ import {
 import api from '../../services/api'
 
 export default function UploadPanel({ onUploaded }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
+
   const [dragging, setDragging] = useState(false)
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -14,6 +20,12 @@ export default function UploadPanel({ onUploaded }) {
   const [error, setError] = useState('')
 
   const handleFile = async (f) => {
+    if (!user) {
+      const fullPath = location.pathname + location.search
+      localStorage.setItem('redirectAfterAuth', fullPath)
+      navigate('/login', { state: { from: fullPath } })
+      return
+    }
     setFile(f)
     setError('')
     setSuccess(false)

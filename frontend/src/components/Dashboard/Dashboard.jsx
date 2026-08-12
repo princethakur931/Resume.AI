@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   LogOut, Zap, ChevronRight, AlertCircle,
   CheckCircle2, Loader2, BarChart3, FileText, Target, Settings, Briefcase
@@ -20,6 +20,7 @@ const STEPS = [
 export default function Dashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const profileMenuRef = useRef(null)
 
   const [step, setStep] = useState('upload')
@@ -65,6 +66,12 @@ export default function Dashboard() {
   }
 
   const handleOptimize = async () => {
+    if (!user) {
+      const fullPath = location.pathname + location.search
+      localStorage.setItem('redirectAfterAuth', fullPath)
+      navigate('/login', { state: { from: fullPath } })
+      return
+    }
     if (!jobDesc.trim() || jobDesc.trim().length < 20) {
       setError('Please enter a job description (at least 20 characters)')
       return
@@ -127,8 +134,8 @@ export default function Dashboard() {
           })}
         </div>
 
-        <div className="hidden md:flex items-center gap-2">
-          <Link to="/jobs" className="btn-secondary text-xs px-3 py-2">Jobs</Link>
+        <div className="flex items-center gap-2">
+          <Link to="/jobs" className="hidden md:flex btn-secondary text-xs px-3 py-2">Jobs</Link>
           <ProfileDropdown />
         </div>
       </header>
