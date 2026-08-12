@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Briefcase,
@@ -18,6 +18,7 @@ import {
   XCircle
 } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import ProfileDropdown from '../Shared/ProfileDropdown'
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg'
@@ -45,6 +46,8 @@ function getDaysLeft(endDate) {
 
 export default function JobsBoard() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -108,6 +111,12 @@ export default function JobsBoard() {
   }, [selectedJob])
 
   const applyJob = async job => {
+    if (!user) {
+      const fullPath = location.pathname + location.search
+      localStorage.setItem('redirectAfterAuth', fullPath)
+      navigate('/login', { state: { from: fullPath } })
+      return
+    }
     const jobId = job._id
     setApplyingFor(jobId)
     setError('')
@@ -153,7 +162,7 @@ export default function JobsBoard() {
           </div>
           <span className="text-base font-bold text-white">Resume<span className="gradient-text">.AI</span></span>
         </Link>
-        <div className="hidden md:flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <ProfileDropdown />
         </div>
       </header>
@@ -439,10 +448,10 @@ export default function JobsBoard() {
                         applyJob(job);
                       }}
                       disabled={isApplying}
-                      className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[12px] font-bold transition-all ${
+                      className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${
                         job.hasApplied
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-white text-slate-900 hover:bg-slate-200 active:scale-95'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
+                          : 'btn-primary active:scale-95'
                       }`}
                     >
                       {isApplying ? 'Applying...' : job.hasApplied ? 'Applied' : 'Apply'}

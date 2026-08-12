@@ -3,6 +3,7 @@ const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
 const Job = require('../models/Job');
 const NotificationService = require('../services/notificationService');
+const optionalAuthMiddleware = require('../middleware/optionalAuth');
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg';
 
@@ -118,7 +119,7 @@ const publicProjection = {
   applicantsCount: { $size: '$applicants' }
 };
 
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', optionalAuthMiddleware, async (req, res) => {
   try {
     await cleanupExpiredJobs();
     const now = new Date();
@@ -139,12 +140,12 @@ router.get('/', authMiddleware, async (req, res) => {
       {
         $project: {
           ...publicProjection,
-          hasApplied: {
+          hasApplied: req.user ? {
             $gt: [
               {
                 $size: {
                   $filter: {
-                    input: '$applicants',
+                    input: { $ifNull: ['$applicants', []] },
                     as: 'applicant',
                     cond: { $eq: ['$$applicant.userId', req.user._id] }
                   }
@@ -152,7 +153,7 @@ router.get('/', authMiddleware, async (req, res) => {
               },
               0
             ]
-          }
+          } : { $literal: false }
         }
       }
     ]);
@@ -163,7 +164,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/:id', authMiddleware, async (req, res) => {
+router.get('/:id', optionalAuthMiddleware, async (req, res) => {
   try {
     const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -185,7 +186,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       {
         $project: {
           ...publicProjection,
-          hasApplied: {
+          hasApplied: req.user ? {
             $gt: [
               {
                 $size: {
@@ -198,7 +199,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
               },
               0
             ]
-          }
+          } : { $literal: false }
         }
       }
     ]);

@@ -46,7 +46,7 @@ export default function Login() {
 
       await continueWithFirebaseUser(result.user, result.user.displayName || '')
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.')
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -75,7 +75,7 @@ export default function Login() {
       await warmup
       await continueWithFirebaseUser(result.user, result.user.displayName || '')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Google login failed')
+      setError('Something went wrong. Please try again.')
     } finally {
       setSocialLoading(false)
     }

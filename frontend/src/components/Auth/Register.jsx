@@ -74,7 +74,7 @@ export default function Register() {
       await signOutFirebase()
       setStatusMessage('A verification link has been sent to your email. Please verify your account, then sign in.')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.')
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -90,7 +90,7 @@ export default function Register() {
       await warmup
       await continueWithFirebaseUser(result.user, result.user.displayName || form.name)
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Google signup failed')
+      setError('Something went wrong. Please try again.')
     } finally {
       setSocialLoading(false)
     }

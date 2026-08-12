@@ -31,7 +31,7 @@ api.interceptors.response.use(
       const requestUrl = err.config?.url || ''
       // /auth/me = session check (401 = not logged in, normal)
       // /auth/(login|register|firebase) = auth screens handle their own errors
-      const isExemptFromRedirect = /\/auth\/(login|register|firebase|me)/.test(requestUrl)
+      const isExemptFromRedirect = /\/auth\/(login|register|firebase|me)|\/resume\/status/.test(requestUrl)
 
       // Only force-redirect to /login for protected API calls (not session/auth requests)
       if (!isExemptFromRedirect) {

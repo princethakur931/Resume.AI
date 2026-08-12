@@ -1,18 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Settings, Briefcase, ChevronRight, LayoutDashboard } from 'lucide-react'
+import { LogOut, User, Briefcase, FileText, HelpCircle, Mail, Menu } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function ProfileDropdown() {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const navigate = useNavigate()
   const profileMenuRef = useRef(null)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [avatarLoadError, setAvatarLoadError] = useState(false)
-
-  const normalizedAvatar = typeof user?.profilePhoto === 'string' ? user.profilePhoto.trim() : ''
-  const shouldShowAvatar = Boolean(normalizedAvatar) && !avatarLoadError
 
   useEffect(() => {
     const handleClickOutside = e => {
@@ -24,85 +20,67 @@ export default function ProfileDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    setAvatarLoadError(false)
-  }, [normalizedAvatar])
-
   const handleLogout = () => {
     logout()
     navigate('/')
   }
 
-  const handleOpenProfile = () => {
-    setMenuOpen(false)
-    navigate('/profile')
-  }
-
   return (
     <div className="relative" ref={profileMenuRef}>
-      <button
-        onClick={() => setMenuOpen(v => !v)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg glass border border-white/[0.06] hover:border-brand-500/40 transition-colors"
+      <button 
+        onClick={() => setMenuOpen(!menuOpen)} 
+        className="p-2 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] transition-colors text-slate-300 hover:text-white flex items-center justify-center"
       >
-        <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center ring-1 ring-white/10">
-          {shouldShowAvatar ? (
-            <img
-              src={normalizedAvatar}
-              alt="Profile"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-              onError={() => setAvatarLoadError(true)}
-            />
-          ) : (
-            <span className="text-[10px] font-semibold text-white">{(user?.name || 'U').charAt(0).toUpperCase()}</span>
-          )}
-        </div>
-        <span className="text-xs text-slate-400 hidden sm:block">{user?.name}</span>
-        <ChevronRight className={`w-3.5 h-3.5 text-slate-500 transition-transform ${menuOpen ? 'rotate-90' : ''}`} />
+        <Menu className="w-5 h-5" />
       </button>
 
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="absolute right-0 mt-2 w-64 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-white/[0.12] shadow-2xl p-2 z-[60]"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 mt-2 w-48 rounded-xl border border-white/[0.08] bg-surface-1 shadow-xl z-50 overflow-hidden backdrop-blur-xl"
           >
-            <div className="px-3 py-2 border-b border-white/[0.06]">
-              <p className="text-xs text-slate-400">Signed in as</p>
-              <p className="text-sm text-white font-medium truncate">{user?.email}</p>
+            <div className="flex flex-col py-1.5">
+              <Link to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>
+                <User className="w-4 h-4 text-brand-400" />
+                Profile
+              </Link>
+              <Link to="/jobs" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>
+                <Briefcase className="w-4 h-4 text-violet-400" />
+                Jobs
+              </Link>
+              <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>
+                <FileText className="w-4 h-4 text-emerald-400" />
+                Resumes
+              </Link>
+              
+              <div className="h-px bg-white/[0.06] my-1.5 mx-3" />
+              
+              <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors w-full text-left" onClick={() => setMenuOpen(false)}>
+                <HelpCircle className="w-4 h-4 text-cyan-400" />
+                Help
+              </button>
+              <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors w-full text-left" onClick={() => setMenuOpen(false)}>
+                <Mail className="w-4 h-4 text-amber-400" />
+                Contact us
+              </button>
+
+              <div className="h-px bg-white/[0.06] my-1.5 mx-3" />
+
+              <button 
+                onClick={() => {
+                  setMenuOpen(false);
+                  handleLogout();
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
             </div>
-            <button
-              onClick={handleOpenProfile}
-              className="w-full mt-1 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/[0.04] text-left text-sm text-slate-300"
-            >
-              <Settings className="w-4 h-4" />
-              Profile Settings
-            </button>
-            <Link
-              to="/dashboard"
-              onClick={() => setMenuOpen(false)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/[0.04] text-left text-sm text-slate-300"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <Link
-              to="/jobs"
-              onClick={() => setMenuOpen(false)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/[0.04] text-left text-sm text-slate-300"
-            >
-              <Briefcase className="w-4 h-4" />
-              Browse Jobs
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-left text-sm text-red-300"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
           </motion.div>
         )}
       </AnimatePresence>

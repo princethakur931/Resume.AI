@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -23,6 +23,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import ProfileDropdown from '../Shared/ProfileDropdown'
 
 const DEFAULT_COMPANY_PHOTO = '/job-icon.jpg'
@@ -46,6 +47,8 @@ function getDaysLeft(endDate) {
 export default function JobDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
 
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +77,12 @@ export default function JobDetail() {
 
   const applyJob = async () => {
     if (!job) return
+    if (!user) {
+      const fullPath = location.pathname + location.search
+      localStorage.setItem('redirectAfterAuth', fullPath)
+      navigate('/login', { state: { from: fullPath } })
+      return
+    }
     setApplying(true)
     setError('')
     setNotice('')
